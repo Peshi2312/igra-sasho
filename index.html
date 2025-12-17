@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Avoid Spikes Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="startScreen">
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Load images
+        const backgroundImg = new Image();
+        backgroundImg.src = 'background.png';
+
+        const ballImg = new Image();
+        ballImg.src = 'image.png';
+
+        const spikeImg = new Image();
+        spikeImg.src = 'Grass_Block.png';
+
+        const sandSpikeImg = new Image();
+        sandSpikeImg.src = 'Sand_Block.png';
+
+        // Ball properties
+        let ball = { x: 100, y: 0, width: 0, height: 0 };
+
+        // Levels: array of spike positions
+        const levels = [
+            // Level 1
+            [{x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}],
+            // Level 2
+            [{x: 250, y: 250}, {x: 350, y: 350}, {x: 450, y: 450}],
+            // Level 3
+            [{x: 150, y: 150}, {x: 250, y: 250}, {x: 350, y: 350}, {x: 450, y: 450}],
+            // Level 4 (sand spikes)
+            [{x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}, {x: 500, y: 500}],
+            // Level 5
+            [{x: 100, y: 100}, {x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}, {x: 500, y: 500}, {x: 600, y: 100}]
+        ];
+
+        let currentLevel = 0;
+        let keys = {};
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            e.preventDefault(); // Prevent default scrolling
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Button event listeners
+        document.getElementById('startScreen').addEventListener('click', (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const width = rect.width;
+            if (x < width * 0.3) {
+                // Options
+                alert('Options: Adjust settings here (not implemented yet).');
+            } else if (x > width * 0.7) {
+                // About
+                alert('About: A simple ball avoidance game created with HTML, CSS, and JavaScript.');
+            } else {
+                // Play
+                document.getElementById('startScreen').style.display = 'none';
+                canvas.style.display = 'block';
+                gameLoop();
+            }
+        });
+
+        function gameLoop() {
+            // Draw background
+            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+
+            // Draw spikes
+            const spikeImage = currentLevel < 3 ? spikeImg : sandSpikeImg;
+            levels[currentLevel].forEach(pos => {
+                ctx.drawImage(spikeImage, pos.x, pos.y);
+            });
+
+            // Move ball
+            const speed = 5;
+            if (keys['ArrowLeft']) ball.x -= speed;
+            if (keys['ArrowRight']) ball.x += speed;
+            if (keys['ArrowUp']) ball.y -= speed;
+            if (keys['ArrowDown']) ball.y += speed;
+
+            // Keep ball in bounds
+            if (ball.x < 0) ball.x = 0;
+            if (ball.x + ball.width > canvas.width) ball.x = canvas.width - ball.width;
+            if (ball.y < 0) ball.y = 0;
+            if (ball.y + ball.height > canvas.height) ball.y = canvas.height - ball.height;
+
+            // Check collision with spikes
+            let collision = false;
+            levels[currentLevel].forEach(pos => {
+                const spikeRect = {
+                    x: pos.x,
+                    y: pos.y,
+                    width: spikeImage.width,
+                    height: spikeImage.height
+                };
+                if (ball.x < spikeRect.x + spikeRect.width &&
+                    ball.x + ball.width > spikeRect.x &&
+                    ball.y < spikeRect.y + spikeRect.height &&
+                    ball.y + ball.height > spikeRect.y) {
+                    collision = true;
+                }
+            });
+
+            if (collision) {
+                // Reset ball position
+                ball.x = 100;
+                ball.y = canvas.height / 2 - ball.height / 2;
+            }
+
+            // Check if reached the end (right side)
+            if (ball.x + ball.width >= canvas.width) {
+                currentLevel++;
+                if (currentLevel >= levels.length) {
+                    alert('Congratulations! You completed all levels!');
+                    // Optionally reset or hide canvas
+                    canvas.style.display = 'none';
+                    document.getElementById('startScreen').style.display = 'block';
+                    currentLevel = 0;
+                    ball.x = 100;
+                    ball.y = canvas.height / 2 - ball.height / 2;
+                    return;
+                } else {
+                    // Reset ball for next level
+                    ball.x = 100;
+                    ball.y = canvas.height / 2 - ball.height / 2;
+                }
+            }
+
+            // Draw ball
+            ctx.drawImage(ballImg, ball.x, ball.y, ball.width, ball.height);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start after images load
+        let loadedImages = 0;
+        const totalImages = 4;
+
+        function checkAllLoaded() {
+            loadedImages++;
+            if (loadedImages === totalImages) {
+                // Set canvas size to background size
+                canvas.width = backgroundImg.width;
+                canvas.height = backgroundImg.height;
+                // Set ball size
+                ball.width = ballImg.width;
+                ball.height = ballImg.height;
+                // Initial ball position
+                ball.y = canvas.height / 2 - ball.height / 2;
+            }
+        }
+
+        backgroundImg.onload = checkAllLoaded;
+        ballImg.onload = checkAllLoaded;
+        spikeImg.onload = checkAllLoaded;
+        sandSpikeImg.onload = checkAllLoaded;
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+body {
+    margin: 0;
+    background-color: #000;
+    font-family: Arial, sans-serif;
+}
+
+body {
+  background-image: url("startscreen.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+  margin: 0;
+}
+
+canvas {
+    border: 2px solid #fff;
+    display: none;
+}

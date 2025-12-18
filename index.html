@@ -1,173 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ball Avoid Spikes Game</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BouncingBall</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body.start-screen {
+      background-image: url("startscreen.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .bouncing-ball {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+
+    .container {
+      text-align: center;
+      z-index: 1;
+    }
+
+    .container.hidden {
+      display: none;
+    }
+
+    h1 {
+      font-size: 5rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      margin-bottom: 80px;
+      text-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .play-section {
+      margin-bottom: 60px;
+    }
+
+    .play-btn {
+      font-size: 3.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, text-shadow 0.2s;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .play-btn:hover {
+      transform: scale(1.05);
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .divider {
+      width: 350px;
+      height: 8px;
+      background: white;
+      border-radius: 10px;
+      margin: 50px auto;
+      position: relative;
+    }
+
+    .paddle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 60px;
+      background: #1f2937;
+      border-radius: 5px;
+    }
+
+    .nav-section {
+      display: flex;
+      gap: 80px;
+      justify-content: center;
+    }
+
+    .nav-btn {
+      font-size: 2.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, text-shadow 0.2s;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-btn:hover {
+      transform: scale(1.05);
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #gameCanvas {
+      display: none;
+      border: 2px solid #fff;
+      background-image: url("background.png");
+      background-size: cover;
+      background-position: center;
+    }
+
+    #gameCanvas.visible {
+      display: block;
+    }
+
+    .game-over {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      z-index: 100;
+    }
+
+    .game-over.visible {
+      display: block;
+    }
+
+    .game-over h2 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      color: #ff4444;
+    }
+
+    .game-over button {
+      padding: 15px 40px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      color: #0ea5e9;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .game-over button:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
-<body>
-    <div id="startScreen">
+<body class="start-screen">
+  <div class="bouncing-ball"></div>
+
+  <div class="container" id="startMenu">
+    <h1>BOUNCINGBALL</h1>
+
+    <div class="play-section">
+      <button class="play-btn" onclick="startGame()">PLAY</button>
     </div>
-    <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    <div class="divider">
+      <div class="paddle"></div>
+    </div>
 
-        // Load images
-        const backgroundImg = new Image();
-        backgroundImg.src = 'background.png';
+    <div class="nav-section">
+      <button class="nav-btn" onclick="window.location.href='options.html'">OPTIONS</button>
+      <button class="nav-btn" onclick="window.location.href='aboutus.html'">ABOUT US</button>
+    </div>
+  </div>
 
-        const ballImg = new Image();
-        ballImg.src = 'image.png';
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-        const spikeImg = new Image();
-        spikeImg.src = 'Grass_Block.png';
+  <div class="game-over" id="gameOver">
+    <h2>GAME OVER!</h2>
+    <p>You touched the sand!</p>
+    <button onclick="restartGame()">Play Again</button>
+  </div>
 
-        const sandSpikeImg = new Image();
-        sandSpikeImg.src = 'Sand_Block.png';
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startMenu = document.getElementById('startMenu');
+    const gameOverScreen = document.getElementById('gameOver');
+    const body = document.body;
 
-        // Ball properties
-        let ball = { x: 100, y: 0, width: 0, height: 0 };
+    // Block size
+    const BLOCK_SIZE = 50;
 
-        // Levels: array of spike positions
-        const levels = [
-            // Level 1
-            [{x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}],
-            // Level 2
-            [{x: 250, y: 250}, {x: 350, y: 350}, {x: 450, y: 450}],
-            // Level 3
-            [{x: 150, y: 150}, {x: 250, y: 250}, {x: 350, y: 350}, {x: 450, y: 450}],
-            // Level 4 (sand spikes)
-            [{x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}, {x: 500, y: 500}],
-            // Level 5
-            [{x: 100, y: 100}, {x: 200, y: 200}, {x: 300, y: 300}, {x: 400, y: 400}, {x: 500, y: 500}, {x: 600, y: 100}]
-        ];
+    // Ball properties
+    let ball = {
+      x: 100,
+      y: 100,
+      radius: 15,
+      vx: 3,
+      vy: 3,
+      color: 'white'
+    };
 
-        let currentLevel = 0;
-        let keys = {};
+    // Blocks array - type: 'grass' or 'sand'
+    let blocks = [];
 
-        document.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            e.preventDefault(); // Prevent default scrolling
-        });
-        document.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
+    // Game state
+    let gameRunning = false;
 
-        // Button event listeners
-        document.getElementById('startScreen').addEventListener('click', (e) => {
-            const rect = e.target.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const width = rect.width;
-            if (x < width * 0.3) {
-                // Options
-                alert('Options: Adjust settings here (not implemented yet).');
-            } else if (x > width * 0.7) {
-                // About
-                alert('About: A simple ball avoidance game created with HTML, CSS, and JavaScript.');
+    // Load images
+    const grassImg = new Image();
+    const sandImg = new Image();
+    grassImg.src = 'Grass_Block.png';
+    sandImg.src = 'Sand_Block.png';
+
+    // Initialize blocks
+    function initBlocks() {
+      blocks = [];
+      // Create a pattern of grass and sand blocks
+      const rows = Math.floor(canvas.height / BLOCK_SIZE);
+      const cols = Math.floor(canvas.width / BLOCK_SIZE);
+      
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          // Create grass blocks at the bottom (safe zone)
+          if (row >= rows - 2) {
+            blocks.push({
+              x: col * BLOCK_SIZE,
+              y: row * BLOCK_SIZE,
+              width: BLOCK_SIZE,
+              height: BLOCK_SIZE,
+              type: 'grass'
+            });
+          }
+          // Create some sand blocks in the middle
+          else if (row >= rows - 4 && col % 3 === 0) {
+            blocks.push({
+              x: col * BLOCK_SIZE,
+              y: row * BLOCK_SIZE,
+              width: BLOCK_SIZE,
+              height: BLOCK_SIZE,
+              type: 'sand'
+            });
+          }
+          // Create grass blocks scattered around
+          else if (Math.random() > 0.7) {
+            blocks.push({
+              x: col * BLOCK_SIZE,
+              y: row * BLOCK_SIZE,
+              width: BLOCK_SIZE,
+              height: BLOCK_SIZE,
+              type: 'grass'
+            });
+          }
+        }
+      }
+    }
+
+    function startGame() {
+      // Hide start screen
+      startMenu.classList.add('hidden');
+      body.classList.remove('start-screen');
+      
+      // Show canvas
+      canvas.classList.add('visible');
+      
+      // Initialize game
+      initBlocks();
+      ball.x = 100;
+      ball.y = 100;
+      ball.vx = 3;
+      ball.vy = 3;
+      gameRunning = true;
+      gameOverScreen.classList.remove('visible');
+      
+      // Start game loop
+      gameLoop();
+    }
+
+    function restartGame() {
+      gameOverScreen.classList.remove('visible');
+      initBlocks();
+      ball.x = 100;
+      ball.y = 100;
+      ball.vx = 3;
+      ball.vy = 3;
+      gameRunning = true;
+      gameLoop();
+    }
+
+    function checkCollision(ball, block) {
+      // Check if ball collides with block
+      const ballLeft = ball.x - ball.radius;
+      const ballRight = ball.x + ball.radius;
+      const ballTop = ball.y - ball.radius;
+      const ballBottom = ball.y + ball.radius;
+
+      const blockLeft = block.x;
+      const blockRight = block.x + block.width;
+      const blockTop = block.y;
+      const blockBottom = block.y + block.height;
+
+      return ballRight > blockLeft &&
+             ballLeft < blockRight &&
+             ballBottom > blockTop &&
+             ballTop < blockBottom;
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      gameOverScreen.classList.add('visible');
+    }
+
+    function update() {
+      if (!gameRunning) return;
+
+      // Update ball position
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Check collisions with blocks
+      for (let block of blocks) {
+        if (checkCollision(ball, block)) {
+          if (block.type === 'sand') {
+            // Game over if touching sand
+            gameOver();
+            return;
+          } else if (block.type === 'grass') {
+            // Bounce on grass
+            // Determine which side of the block was hit
+            const ballCenterX = ball.x;
+            const ballCenterY = ball.y;
+            const blockCenterX = block.x + block.width / 2;
+            const blockCenterY = block.y + block.height / 2;
+
+            const dx = ballCenterX - blockCenterX;
+            const dy = ballCenterY - blockCenterY;
+
+            // Bounce horizontally or vertically based on which side is closer
+            if (Math.abs(dx) > Math.abs(dy)) {
+              ball.vx = -ball.vx;
+              // Push ball out of block
+              if (dx > 0) {
+                ball.x = block.x + block.width + ball.radius;
+              } else {
+                ball.x = block.x - ball.radius;
+              }
             } else {
-                // Play
-                document.getElementById('startScreen').style.display = 'none';
-                canvas.style.display = 'block';
-                gameLoop();
+              ball.vy = -ball.vy;
+              // Push ball out of block
+              if (dy > 0) {
+                ball.y = block.y + block.height + ball.radius;
+              } else {
+                ball.y = block.y - ball.radius;
+              }
             }
-        });
-
-        function gameLoop() {
-            // Draw background
-            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-
-            // Draw spikes
-            const spikeImage = currentLevel < 3 ? spikeImg : sandSpikeImg;
-            levels[currentLevel].forEach(pos => {
-                ctx.drawImage(spikeImage, pos.x, pos.y);
-            });
-
-            // Move ball
-            const speed = 5;
-            if (keys['ArrowLeft']) ball.x -= speed;
-            if (keys['ArrowRight']) ball.x += speed;
-            if (keys['ArrowUp']) ball.y -= speed;
-            if (keys['ArrowDown']) ball.y += speed;
-
-            // Keep ball in bounds
-            if (ball.x < 0) ball.x = 0;
-            if (ball.x + ball.width > canvas.width) ball.x = canvas.width - ball.width;
-            if (ball.y < 0) ball.y = 0;
-            if (ball.y + ball.height > canvas.height) ball.y = canvas.height - ball.height;
-
-            // Check collision with spikes
-            let collision = false;
-            levels[currentLevel].forEach(pos => {
-                const spikeRect = {
-                    x: pos.x,
-                    y: pos.y,
-                    width: spikeImage.width,
-                    height: spikeImage.height
-                };
-                if (ball.x < spikeRect.x + spikeRect.width &&
-                    ball.x + ball.width > spikeRect.x &&
-                    ball.y < spikeRect.y + spikeRect.height &&
-                    ball.y + ball.height > spikeRect.y) {
-                    collision = true;
-                }
-            });
-
-            if (collision) {
-                // Reset ball position
-                ball.x = 100;
-                ball.y = canvas.height / 2 - ball.height / 2;
-            }
-
-            // Check if reached the end (right side)
-            if (ball.x + ball.width >= canvas.width) {
-                currentLevel++;
-                if (currentLevel >= levels.length) {
-                    alert('Congratulations! You completed all levels!');
-                    // Optionally reset or hide canvas
-                    canvas.style.display = 'none';
-                    document.getElementById('startScreen').style.display = 'block';
-                    currentLevel = 0;
-                    ball.x = 100;
-                    ball.y = canvas.height / 2 - ball.height / 2;
-                    return;
-                } else {
-                    // Reset ball for next level
-                    ball.x = 100;
-                    ball.y = canvas.height / 2 - ball.height / 2;
-                }
-            }
-
-            // Draw ball
-            ctx.drawImage(ballImg, ball.x, ball.y, ball.width, ball.height);
-
-            requestAnimationFrame(gameLoop);
+          }
         }
+      }
 
-        // Start after images load
-        let loadedImages = 0;
-        const totalImages = 4;
+      // Bounce off canvas edges
+      if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) {
+        ball.vx = -ball.vx;
+        ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
+      }
 
-        function checkAllLoaded() {
-            loadedImages++;
-            if (loadedImages === totalImages) {
-                // Set canvas size to background size
-                canvas.width = backgroundImg.width;
-                canvas.height = backgroundImg.height;
-                // Set ball size
-                ball.width = ballImg.width;
-                ball.height = ballImg.height;
-                // Initial ball position
-                ball.y = canvas.height / 2 - ball.height / 2;
-            }
+      if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
+        ball.vy = -ball.vy;
+        ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
+      }
+    }
+
+    function draw() {
+      // Clear canvas (background image will show through)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw blocks
+      for (let block of blocks) {
+        if (block.type === 'grass') {
+          ctx.drawImage(grassImg, block.x, block.y, block.width, block.height);
+        } else if (block.type === 'sand') {
+          ctx.drawImage(sandImg, block.x, block.y, block.width, block.height);
         }
+      }
 
-        backgroundImg.onload = checkAllLoaded;
-        ballImg.onload = checkAllLoaded;
-        spikeImg.onload = checkAllLoaded;
-        sandSpikeImg.onload = checkAllLoaded;
-    </script>
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ball.color;
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+  </script>
 </body>
 </html>

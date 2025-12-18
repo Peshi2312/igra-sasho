@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Options - BouncingBall</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 800px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      margin-bottom: 60px;
+      /* text-shadow removed */
+    }
+
+    .options-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .option-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      margin: 15px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+
+    .option-label {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    select, input[type="range"] {
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: none;
+      background: white;
+      color: #0ea5e9;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      width: 200px;
+    }
+
+    .back-btn {
+      padding: 15px 60px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 15px;
+      background: white;
+      color: #0ea5e9;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .back-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .back-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OPTIONS</h1>
+
+    <div class="options-section">
+      <h2>Game Settings</h2>
+
+      <div class="option-item">
+        <span class="option-label">Difficulty</span>
+        <select>
+          <option>Easy</option>
+          <option selected>Medium</option>
+          <option>Hard</option>
+        </select>
+      </div>
+
+      <div class="option-item">
+        <span class="option-label">Sound Volume</span>
+        <input type="range" min="0" max="100" value="70">
+      </div>
+
+      <div class="option-item">
+        <span class="option-label">Music Volume</span>
+        <input type="range" min="0" max="100" value="50">
+      </div>
+
+      <div class="option-item">
+        <span class="option-label">Ball Color</span>
+        <select>
+          <option>White</option>
+          <option>Red</option>
+          <option>Green</option>
+          <option>Yellow</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="back-btn" onclick="window.location.href='/'">Back</button>
+  </div>
+</body>
+</html>

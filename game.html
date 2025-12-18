@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BouncingBall - Game</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; color:#fff; position:relative; }
+    body.start-screen { background-image: url("background.png"); background-size: cover; background-position: center; background-repeat: no-repeat; }
+    #gameCanvas { border: 2px solid #fff; background-color: transparent; display:block; }
+    .game-over { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:40px; border-radius:20px; text-align:center; z-index:100; color:white; }
+    .game-over.visible { display:block; }
+    .game-over h2 { font-size:3rem; margin-bottom:20px; color:#ff4444; font-weight:900; }
+    .game-over p { font-weight:900; }
+    .game-over button { padding:15px 40px; font-size:1.5rem; font-weight:900; border:none; border-radius:10px; background:white; color:#0ea5e9; cursor:pointer; margin-top:20px; }
+  </style>
+</head>
+<body class="start-screen">
+  <canvas id="gameCanvas" width="800" height="50"></canvas>
+
+  <div class="game-over" id="gameOver">
+    <h2>GAME OVER!</h2>
+    <p>You touched the sand!</p>
+    <button id="restartBtn">Play Again</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gameOverScreen = document.getElementById('gameOver');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Block size
+    const BLOCK_SIZE = 50;
+
+    // Ball properties
+    let ball = { x: 100, y: 25, radius: 15, vx: 3, vy: 3, color: 'white' };
+
+    // Blocks array - type: 'grass' or 'sand'
+    let blocks = [];
+
+    // Game state
+    let gameRunning = false;
+
+    // Load images
+    const grassImg = new Image();
+    const sandImg = new Image();
+    grassImg.src = 'Grass_Block.png';
+    sandImg.src = 'Sand_Block.png';
+
+    function initCanvasForBottomRow() {
+      // ensure canvas shows only one block row (bottom row)
+      canvas.width = 800;
+      canvas.height = BLOCK_SIZE;
+      canvas.style.position = 'absolute';
+      canvas.style.left = '50%';
+      canvas.style.transform = 'translateX(-50%)';
+      canvas.style.bottom = '20px';
+    }
+
+    function initBlocks() {
+      blocks = [];
+      const rows = Math.floor(600 / BLOCK_SIZE); // logical rows for block generation
+      const cols = Math.floor(canvas.width / BLOCK_SIZE);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          if (row >= rows - 2) {
+            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'grass' });
+          } else if (row >= rows - 4 && col % 3 === 0) {
+            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'sand' });
+          } else if (Math.random() > 0.7) {
+            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'grass' });
+          }
+        }
+      }
+
+      // Keep only bottom-row blocks visible on the small canvas when drawing
+    }
+
+    function checkCollision(ball, block) {
+      const ballLeft = ball.x - ball.radius;
+      const ballRight = ball.x + ball.radius;
+      const ballTop = ball.y - ball.radius;
+      const ballBottom = ball.y + ball.radius;
+      const blockLeft = block.x;
+      const blockRight = block.x + block.width;
+      const blockTop = block.y;
+      const blockBottom = block.y + block.height;
+
+      return ballRight > blockLeft && ballLeft < blockRight && ballBottom > blockTop && ballTop < blockBottom;
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      gameOverScreen.classList.add('visible');
+    }
+
+    function update() {
+      if (!gameRunning) return;
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      for (let block of blocks) {
+        // only check against blocks in the bottom row area
+        if (block.y >= (Math.floor(600 / BLOCK_SIZE) - 2) * BLOCK_SIZE) {
+          if (checkCollision(ball, block)) {
+            if (block.type === 'sand') { gameOver(); return; }
+            else if (block.type === 'grass') {
+              const ballCenterX = ball.x;
+              const ballCenterY = ball.y;
+              const blockCenterX = block.x + block.width / 2;
+              const blockCenterY = block.y + block.height / 2;
+              const dx = ballCenterX - blockCenterX;
+              const dy = ballCenterY - blockCenterY;
+              if (Math.abs(dx) > Math.abs(dy)) { ball.vx = -ball.vx; if (dx > 0) ball.x = block.x + block.width + ball.radius; else ball.x = block.x - ball.radius; }
+              else { ball.vy = -ball.vy; if (dy > 0) ball.y = block.y + block.height + ball.radius; else ball.y = block.y - ball.radius; }
+            }
+          }
+        }
+      }
+
+      if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) { ball.vx = -ball.vx; ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x)); }
+      if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) { ball.vy = -ball.vy; ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y)); }
+    }
+
+    function draw() {
+      // clear small canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // draw only blocks that intersect the visible bottom row
+      const rows = Math.floor(600 / BLOCK_SIZE);
+      const visibleTop = (rows - 2) * BLOCK_SIZE;
+
+      for (let block of blocks) {
+        if (block.y >= visibleTop) {
+          if (block.type === 'grass') ctx.drawImage(grassImg, block.x, block.y - visibleTop, block.width, block.height);
+          else if (block.type === 'sand') ctx.drawImage(sandImg, block.x, block.y - visibleTop, block.width, block.height);
+        }
+      }
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ball.color;
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function gameLoop() { if (!gameRunning) return; update(); draw(); requestAnimationFrame(gameLoop); }
+
+    function startGame() {
+      initCanvasForBottomRow();
+      initBlocks();
+      ball.x = 100; ball.y = 25; ball.vx = 3; ball.vy = 3;
+      gameRunning = true; gameOverScreen.classList.remove('visible');
+      gameLoop();
+    }
+
+    function restartGame() { gameOverScreen.classList.remove('visible'); startGame(); }
+
+    restartBtn.addEventListener('click', restartGame);
+
+    // start immediately when page loads
+    window.addEventListener('load', () => { startGame(); });
+  </script>
+</body>
+</html>

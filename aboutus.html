@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us - BouncingBall</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      margin-bottom: 60px;
+      /* text-shadow removed */
+    }
+
+    .about-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+      text-align: left;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    p {
+      font-size: 1.2rem;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .feature-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .feature-item h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+    }
+
+    .back-btn {
+      padding: 15px 60px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 15px;
+      background: white;
+      color: #0ea5e9;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .back-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .back-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ABOUT US</h1>
+
+    <div class="about-section">
+      <h2>Welcome to BouncingBall</h2>
+
+      <p>
+        BouncingBall is a classic arcade-style game that brings back the nostalgia of simple yet addictive gameplay.
+        Our mission is to provide players with an entertaining and challenging experience that tests reflexes and timing.
+      </p>
+
+      <p>
+        The game features intuitive controls, smooth physics, and progressively challenging levels that keep you engaged
+        for hours. Whether you're a casual player or a competitive gamer, BouncingBall offers something for everyone.
+      </p>
+
+      <div class="features">
+        <div class="feature-item">
+          <h3>Simple Controls</h3>
+          <p>Easy to learn, hard to master</p>
+        </div>
+        <div class="feature-item">
+          <h3>Smooth Physics</h3>
+          <p>Realistic ball movement</p>
+        </div>
+        <div class="feature-item">
+          <h3>Multiple Levels</h3>
+          <p>Increasing difficulty</p>
+        </div>
+        <div class="feature-item">
+          <h3>Score Tracking</h3>
+          <p>Compete for high scores</p>
+        </div>
+      </div>
+
+      <p>
+        Created with passion and dedication, BouncingBall is constantly being updated with new features and improvements
+        based on player feedback. Thank you for playing!
+      </p>
+    </div>
+
+    <button class="back-btn" onclick="window.location.href='/'">Back</button>
+  </div>
+</body>
+</html>

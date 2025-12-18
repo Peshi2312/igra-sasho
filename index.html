@@ -12,8 +12,9 @@
     }
 
     body {
-      font-family: 'Arial', sans-serif;
-      min-height: 100vh;
+      font-family: 'Aerial', sans-serif;
+      font-weight: 900;
+      min-height: 90vh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -24,7 +25,7 @@
     }
 
     body.start-screen {
-      background-image: url("startscreen.png");
+      background-image: url("newimage.png");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -53,6 +54,7 @@
     .container {
       text-align: center;
       z-index: 1;
+      transform: translateY(20px); /* move everything down a bit */
     }
 
     .container.hidden {
@@ -60,112 +62,96 @@
     }
 
     h1 {
-      font-size: 5rem;
+      font-size: 8rem;
       font-weight: 900;
-      letter-spacing: 0.05em;
-      margin-bottom: 80px;
-      text-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      letter-spacing: 0.1em;
+      margin-bottom: 100px;
     }
 
     .play-section {
-      margin-bottom: 60px;
+      margin: 20px 0 80px; /* push Play a bit lower (top 20px, bottom 80px) */
+    }
+
+    #logo_bouncingball {
+      display: block;
+      margin: 0 auto 40px;
+      width: 1200px; /* larger size */
+      max-width: 98%;
+      height: auto;
+      transform: translateY(-20px); /* nudge upward */
     }
 
     .play-btn {
-      font-size: 3.5rem;
+      font-size: 4.5rem;
+      line-height: 1;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       background: none;
       border: none;
       color: white;
       cursor: pointer;
-      transition: transform 0.2s, text-shadow 0.2s;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+      padding: 8px 16px; /* reduce height */
     }
 
     .play-btn:hover {
-      transform: scale(1.05);
-      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      transform: scale(1.1);
     }
 
     .divider {
-      width: 350px;
-      height: 8px;
-      background: white;
-      border-radius: 10px;
-      margin: 50px auto;
+      width: 700px; /* doubled from 350px */
+      max-width: 90%;
+      height: auto;
+      margin: 30px auto; /* moved up a bit */
       position: relative;
+      transform: translateY(-20px); /* shift upward */
     }
 
-    .paddle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 30px;
-      height: 60px;
-      background: #1f2937;
-      border-radius: 5px;
+    .divider img.imageline {
+      display: block;
+      width: 100%;
+      height: auto;
     }
 
     .nav-section {
       display: flex;
-      gap: 80px;
+      flex-direction: column;
+      gap: 12px; /* slightly tighter */
+      align-items: center;
       justify-content: center;
+      margin-top: 24px; /* move Options/About Us lower */
     }
 
     .nav-btn {
-      font-size: 2.5rem;
+      font-size: 1.9rem; /* slightly smaller */
+      line-height: 1;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       background: none;
       border: none;
       color: white;
       cursor: pointer;
-      transition: transform 0.2s, text-shadow 0.2s;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+      padding: 4px 8px; /* reduce height */
     }
 
     .nav-btn:hover {
-      transform: scale(1.05);
-      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      transform: scale(1.1);
     }
 
-    #gameCanvas {
-      display: none;
-      border: 2px solid #fff;
-      background-image: url("background.png");
-      background-size: cover;
-      background-position: center;
-    }
-
-    #gameCanvas.visible {
-      display: block;
-    }
-
-    .game-over {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      padding: 40px;
-      border-radius: 20px;
-      text-align: center;
-      z-index: 100;
-    }
-
-    .game-over.visible {
-      display: block;
-    }
+    /* game canvas and overlay moved to game.html */
 
     .game-over h2 {
       font-size: 3rem;
       margin-bottom: 20px;
       color: #ff4444;
+      font-weight: 900;
+    }
+
+    .game-over p {
+      font-weight: 900;
     }
 
     .game-over button {
@@ -189,14 +175,15 @@
   <div class="bouncing-ball"></div>
 
   <div class="container" id="startMenu">
-    <h1>BOUNCINGBALL</h1>
+    <img id="logo_bouncingball" src="logobouncingball.png" alt="BouncingBall Logo">
 
     <div class="play-section">
-      <button class="play-btn" onclick="startGame()">PLAY</button>
+      <button class="play-btn" onclick="window.location.href='game.html'">PLAY</button>
     </div>
 
     <div class="divider">
-      <div class="paddle"></div>
+      <img src="imageline.png" alt="divider" class="imageline">
+      
     </div>
 
     <div class="nav-section">
@@ -205,233 +192,6 @@
     </div>
   </div>
 
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-  <div class="game-over" id="gameOver">
-    <h2>GAME OVER!</h2>
-    <p>You touched the sand!</p>
-    <button onclick="restartGame()">Play Again</button>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const startMenu = document.getElementById('startMenu');
-    const gameOverScreen = document.getElementById('gameOver');
-    const body = document.body;
-
-    // Block size
-    const BLOCK_SIZE = 50;
-
-    // Ball properties
-    let ball = {
-      x: 100,
-      y: 100,
-      radius: 15,
-      vx: 3,
-      vy: 3,
-      color: 'white'
-    };
-
-    // Blocks array - type: 'grass' or 'sand'
-    let blocks = [];
-
-    // Game state
-    let gameRunning = false;
-
-    // Load images
-    const grassImg = new Image();
-    const sandImg = new Image();
-    grassImg.src = 'Grass_Block.png';
-    sandImg.src = 'Sand_Block.png';
-
-    // Initialize blocks
-    function initBlocks() {
-      blocks = [];
-      // Create a pattern of grass and sand blocks
-      const rows = Math.floor(canvas.height / BLOCK_SIZE);
-      const cols = Math.floor(canvas.width / BLOCK_SIZE);
-      
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          // Create grass blocks at the bottom (safe zone)
-          if (row >= rows - 2) {
-            blocks.push({
-              x: col * BLOCK_SIZE,
-              y: row * BLOCK_SIZE,
-              width: BLOCK_SIZE,
-              height: BLOCK_SIZE,
-              type: 'grass'
-            });
-          }
-          // Create some sand blocks in the middle
-          else if (row >= rows - 4 && col % 3 === 0) {
-            blocks.push({
-              x: col * BLOCK_SIZE,
-              y: row * BLOCK_SIZE,
-              width: BLOCK_SIZE,
-              height: BLOCK_SIZE,
-              type: 'sand'
-            });
-          }
-          // Create grass blocks scattered around
-          else if (Math.random() > 0.7) {
-            blocks.push({
-              x: col * BLOCK_SIZE,
-              y: row * BLOCK_SIZE,
-              width: BLOCK_SIZE,
-              height: BLOCK_SIZE,
-              type: 'grass'
-            });
-          }
-        }
-      }
-    }
-
-    function startGame() {
-      // Hide start screen
-      startMenu.classList.add('hidden');
-      body.classList.remove('start-screen');
-      
-      // Show canvas
-      canvas.classList.add('visible');
-      
-      // Initialize game
-      initBlocks();
-      ball.x = 100;
-      ball.y = 100;
-      ball.vx = 3;
-      ball.vy = 3;
-      gameRunning = true;
-      gameOverScreen.classList.remove('visible');
-      
-      // Start game loop
-      gameLoop();
-    }
-
-    function restartGame() {
-      gameOverScreen.classList.remove('visible');
-      initBlocks();
-      ball.x = 100;
-      ball.y = 100;
-      ball.vx = 3;
-      ball.vy = 3;
-      gameRunning = true;
-      gameLoop();
-    }
-
-    function checkCollision(ball, block) {
-      // Check if ball collides with block
-      const ballLeft = ball.x - ball.radius;
-      const ballRight = ball.x + ball.radius;
-      const ballTop = ball.y - ball.radius;
-      const ballBottom = ball.y + ball.radius;
-
-      const blockLeft = block.x;
-      const blockRight = block.x + block.width;
-      const blockTop = block.y;
-      const blockBottom = block.y + block.height;
-
-      return ballRight > blockLeft &&
-             ballLeft < blockRight &&
-             ballBottom > blockTop &&
-             ballTop < blockBottom;
-    }
-
-    function gameOver() {
-      gameRunning = false;
-      gameOverScreen.classList.add('visible');
-    }
-
-    function update() {
-      if (!gameRunning) return;
-
-      // Update ball position
-      ball.x += ball.vx;
-      ball.y += ball.vy;
-
-      // Check collisions with blocks
-      for (let block of blocks) {
-        if (checkCollision(ball, block)) {
-          if (block.type === 'sand') {
-            // Game over if touching sand
-            gameOver();
-            return;
-          } else if (block.type === 'grass') {
-            // Bounce on grass
-            // Determine which side of the block was hit
-            const ballCenterX = ball.x;
-            const ballCenterY = ball.y;
-            const blockCenterX = block.x + block.width / 2;
-            const blockCenterY = block.y + block.height / 2;
-
-            const dx = ballCenterX - blockCenterX;
-            const dy = ballCenterY - blockCenterY;
-
-            // Bounce horizontally or vertically based on which side is closer
-            if (Math.abs(dx) > Math.abs(dy)) {
-              ball.vx = -ball.vx;
-              // Push ball out of block
-              if (dx > 0) {
-                ball.x = block.x + block.width + ball.radius;
-              } else {
-                ball.x = block.x - ball.radius;
-              }
-            } else {
-              ball.vy = -ball.vy;
-              // Push ball out of block
-              if (dy > 0) {
-                ball.y = block.y + block.height + ball.radius;
-              } else {
-                ball.y = block.y - ball.radius;
-              }
-            }
-          }
-        }
-      }
-
-      // Bounce off canvas edges
-      if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) {
-        ball.vx = -ball.vx;
-        ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
-      }
-
-      if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
-        ball.vy = -ball.vy;
-        ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
-      }
-    }
-
-    function draw() {
-      // Clear canvas (background image will show through)
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw blocks
-      for (let block of blocks) {
-        if (block.type === 'grass') {
-          ctx.drawImage(grassImg, block.x, block.y, block.width, block.height);
-        } else if (block.type === 'sand') {
-          ctx.drawImage(sandImg, block.x, block.y, block.width, block.height);
-        }
-      }
-
-      // Draw ball
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = ball.color;
-      ctx.fill();
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    function gameLoop() {
-      if (!gameRunning) return;
-      
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
-    }
-  </script>
+  <!-- game moved to game.html -->
 </body>
 </html>

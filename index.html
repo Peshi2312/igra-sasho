@@ -69,7 +69,10 @@
     }
 
     .play-section {
-      margin: 20px 0 80px; /* push Play a bit lower (top 20px, bottom 80px) */
+      margin: 20px 0 0; /* remove extra bottom space */
+      transform: translateY(40px); /* move Play down to imageline level */
+      position: relative;
+      z-index: 2;
     }
 
     #logo_bouncingball {
@@ -81,19 +84,21 @@
       transform: translateY(-20px); /* nudge upward */
     }
 
-    .play-btn {
-      font-size: 4.5rem;
-      line-height: 1;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      transition: transform 0.2s;
-      padding: 8px 16px; /* reduce height */
-    }
+      .play-btn {
+        font-size: 6rem; /* lower height */
+        line-height: 0.9;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: transform 0.2s;
+        padding: 4px 8px; /* reduce vertical padding */
+        position: relative;
+        z-index: 3; /* ensure button sits above imageline */
+      }
 
     .play-btn:hover {
       transform: scale(1.1);
@@ -103,9 +108,9 @@
       width: 700px; /* doubled from 350px */
       max-width: 90%;
       height: auto;
-      margin: 30px auto; /* moved up a bit */
+      margin: 40px auto; /* ensure space between Play and divider */
       position: relative;
-      transform: translateY(-20px); /* shift upward */
+      transform: none; /* keep divider in normal flow so Play stays above it */
     }
 
     .divider img.imageline {
@@ -124,7 +129,7 @@
     }
 
     .nav-btn {
-      font-size: 1.9rem; /* slightly smaller */
+      font-size: 2.4rem; /* a bit bigger */
       line-height: 1;
       font-weight: 900;
       text-transform: uppercase;
@@ -134,7 +139,7 @@
       color: white;
       cursor: pointer;
       transition: transform 0.2s;
-      padding: 4px 8px; /* reduce height */
+      padding: 6px 10px;
     }
 
     .nav-btn:hover {

@@ -4,13 +4,17 @@ body {
     font-family: Arial, sans-serif;
 }
 
-body {
-  background-image: url("startscreen.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  height: 100vh;
-  margin: 0;
+#startScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-image: url("startscreen.png");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
 }
 
 canvas {

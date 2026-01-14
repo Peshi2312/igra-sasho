@@ -91,6 +91,28 @@
     <h2 id="gameOverTitle">GAME OVER!</h2>
     <p id="gameOverText">You touched the sand!</p>
     <button id="restartBtn">Play Again</button>
+    <button id="menuBtn" style="display:none;margin-left:12px;">Main Menu</button>
+  </div>
+  <div id="victoryScreen" style="display:none; position:fixed; inset:0; background:#000; z-index:200; color:#fff; align-items:center; justify-content:center;">
+    <div style="text-align:center; margin:auto;">
+      <div style="font-size:96px; line-height:1;">👑</div>
+      <h1 style="font-size:48px; margin:12px 0;">You Won</h1>
+      <p style="font-weight:700; margin-bottom:18px;">Congratulations — you completed all levels!</p>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <button id="victoryPlayBtn" style="padding:12px 20px; font-size:18px;">Play Again</button>
+        <button id="victoryMenuBtn" style="padding:12px 20px; font-size:18px;">Main Menu</button>
+      </div>
+      <div id="victoryLevelChoices" style="display:none; margin-top:18px;">
+        <p style="margin-bottom:8px;">Choose level:</p>
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+          <button class="victoryLevelBtn" data-level="1">Level 1</button>
+          <button class="victoryLevelBtn" data-level="2">Level 2</button>
+          <button class="victoryLevelBtn" data-level="3">Level 3</button>
+          <button class="victoryLevelBtn" data-level="4">Level 4</button>
+          <button class="victoryLevelBtn" data-level="5">Level 5</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -101,16 +123,20 @@
     const gameOverTitle = document.getElementById('gameOverTitle');
     const gameOverText = document.getElementById('gameOverText');
     const restartBtn = document.getElementById('restartBtn');
+    const menuBtn = document.getElementById('menuBtn');
+    const victoryScreen = document.getElementById('victoryScreen');
+    const victoryPlayBtn = document.getElementById('victoryPlayBtn');
+    const victoryMenuBtn = document.getElementById('victoryMenuBtn');
+    const victoryLevelChoices = document.getElementById('victoryLevelChoices');
 
     // Constants
     const BLOCK_WIDTH = 80;
     const BLOCK_HEIGHT = 50;
     let groundY = canvas.height - BLOCK_HEIGHT;
-    const GRAVITY = 0.20;
-    const BOUNCE_FACTOR = 1.0;
-    const LOG_BOUNCE_FACTOR = 1.0;
+    const GRAVITY = 0; // No gravity - Breakout style
+    const BASE_BALL_SPEED = 6; // starting speed
+    let BALL_SPEED = BASE_BALL_SPEED; // adjustable per level
     const SCROLL_SPEED = 2;
-    const BALL_SPEED = 18;
 
     // Ball properties
     let ball = {
@@ -137,6 +163,60 @@
 
     // Game state
     let gameRunning = false;
+    let hasHitLog = false; // Track if ball has hit the log
+    let ballLaunchTime = 0; // Track when ball was launched
+    const LOG_HIT_TIMEOUT = 15000; // 15 seconds to hit the log after launch
+    // Log fly-away state
+    let logFlying = false;
+    let logFlyMessage = '';
+    // Track grass hits for win condition
+    let grassHitCount = 0;
+    // Leveling
+    let currentLevel = 1;
+    const MAX_LEVEL = 5;
+
+    function grassTarget(level) {
+      return 6 + (level - 1) * 2;
+    }
+
+    function doAdvance(next) {
+      gameOverScreen.classList.remove('visible');
+      currentLevel = next;
+      // increase speed slightly
+      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
+      // reset state for next level
+      grassHitCount = 0;
+      hasHitLog = false;
+      ballLaunchTime = 0;
+      resetBall();
+      initBlocks();
+      gameRunning = true;
+      controlsEnabled = true;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function advanceLevel() {
+      if (currentLevel >= MAX_LEVEL) return;
+      gameRunning = false;
+      controlsEnabled = false;
+      const next = currentLevel + 1;
+      // show level complete overlay with choice
+      gameOverTitle.textContent = 'LEVEL ' + next + ' COMPLETE';
+      gameOverText.textContent = 'Proceed to level ' + next + '?\nTarget: ' + grassTarget(next) + ' grass hits. Speed will increase.';
+      // show menu option
+      menuBtn.style.display = 'inline-block';
+      restartBtn.textContent = 'Next Level';
+      // wire buttons
+      restartBtn.onclick = () => doAdvance(next);
+      menuBtn.onclick = () => { window.location.href = 'index.html'; };
+      gameOverScreen.classList.add('visible');
+    }
+    // Log press (down) animation state
+    let logPressed = false;
+    let logPressStart = 0;
+    const LOG_PRESS_DOWN = 120; // ms down
+    const LOG_PRESS_UP = 220; // ms up
+    const LOG_PRESS_DEPTH = 26; // px down distance
 
     // Load images
     const grassImg = new Image();
@@ -193,6 +273,11 @@
 
     function endGame(win, message) {
       gameRunning = false;
+      // hide level/menu option by default on final game over
+      menuBtn.style.display = 'none';
+      restartBtn.textContent = 'Play Again';
+      restartBtn.onclick = restartGame;
+
       gameOverScreen.classList.add('visible');
 
       if (win) {
@@ -206,8 +291,74 @@
       gameOverText.textContent = message;
     }
 
+    function showVictoryScreen() {
+      // hide other overlays
+      gameOverScreen.classList.remove('visible');
+      victoryScreen.style.display = 'flex';
+      victoryLevelChoices.style.display = 'none';
+      // play again shows level choices
+      victoryPlayBtn.onclick = () => { victoryLevelChoices.style.display = 'block'; };
+      victoryMenuBtn.onclick = () => { window.location.href = 'index.html'; };
+      // wire level buttons
+      const lvlBtns = document.querySelectorAll('.victoryLevelBtn');
+      lvlBtns.forEach(b => {
+        b.onclick = () => { const lv = b.getAttribute('data-level'); window.location.href = 'game.html?level=' + lv; };
+      });
+    }
+
+    function startLogFlyAway(message) {
+      if (logFlying) return;
+      logFlying = true;
+      logFlyMessage = message || 'The log flew away!';
+      controlsEnabled = false;
+      // stop the ball so animation is visible
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.launched = false;
+    }
+
     function update() {
       if (!gameRunning) return;
+
+      // If the log is flying away, animate it upwards until off-screen
+      if (logFlying) {
+        topLog.y -= 8;
+        topLog.x += Math.sin(Date.now() / 150) * 3;
+        if (topLog.y + topLog.height < 0) {
+          // After animation completes, end the game with stored message
+          const msg = logFlyMessage || 'The log flew away!';
+          logFlying = false;
+          endGame(false, msg);
+        }
+        return;
+      }
+
+      // If the log was just pressed by the ball, animate it down then back up
+      if (logPressed) {
+        const t = Date.now() - logPressStart;
+        if (t < LOG_PRESS_DOWN) {
+          // moving down
+          const frac = t / LOG_PRESS_DOWN;
+          topLog.y = (topLog.baseY || topLog.y) + LOG_PRESS_DEPTH * frac;
+        } else if (t < LOG_PRESS_DOWN + LOG_PRESS_UP) {
+          // moving up
+          const frac = (t - LOG_PRESS_DOWN) / LOG_PRESS_UP;
+          topLog.y = (topLog.baseY || topLog.y) + LOG_PRESS_DEPTH * (1 - frac);
+        } else {
+          // finished
+          topLog.y = topLog.baseY || topLog.y;
+          logPressed = false;
+        }
+      }
+
+      // Check if ball hasn't hit log within time limit (after launch)
+      if (!hasHitLog && ball.launched && ballLaunchTime > 0) {
+        const elapsed = Date.now() - ballLaunchTime;
+        if (elapsed > LOG_HIT_TIMEOUT) {
+          startLogFlyAway('You took too long to hit the log!');
+          return;
+        }
+      }
 
       // Move log with arrow keys
       if (controlsEnabled) {
@@ -234,53 +385,113 @@
         }
       }
 
-      // Ball physics only after launch
+      // Ball physics only after launch - Breakout style (constant speed)
       if (ball.launched) {
-        ball.vy += GRAVITY;
+        // Normalize velocity to maintain constant speed
+        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        if (speed > 0) {
+          ball.vx = (ball.vx / speed) * BALL_SPEED;
+          ball.vy = (ball.vy / speed) * BALL_SPEED;
+        }
         ball.x += ball.vx;
         ball.y += ball.vy;
+        
+        // Check if ball goes above/over the log - lose condition
+        // Ball is above the log if its bottom edge is above the log's top edge
+        if (ball.y + ball.radius < topLog.y) {
+          if (!hasHitLog) {
+            startLogFlyAway('The ball went over the log before hitting it!');
+          } else {
+            endGame(false, 'The ball went over the log!');
+          }
+          return;
+        }
       }
 
-      // Wall collisions
+      // Wall collisions - Breakout style (perfect bounces)
       if (ball.x - ball.radius <= 0) {
         ball.x = ball.radius;
-        ball.vx = Math.abs(ball.vx);
+        ball.vx = Math.abs(ball.vx); // Bounce right
       } else if (ball.x + ball.radius >= canvas.width) {
         ball.x = canvas.width - ball.radius;
-        ball.vx = -Math.abs(ball.vx);
+        ball.vx = -Math.abs(ball.vx); // Bounce left
       }
 
       // Top of screen
       if (ball.y - ball.radius <= 0) {
         ball.y = ball.radius;
-        ball.vy = Math.abs(ball.vy);
+        ball.vy = Math.abs(ball.vy); // Bounce down
       }
 
-      // If ball falls below bottom, lose
+      // If ball falls below bottom, lose (only if hasn't hit log yet)
       if (ball.y - ball.radius > canvas.height + 50) {
-        endGame(false, 'You fell off the screen!');
+        if (!hasHitLog) {
+          startLogFlyAway('You fell off before hitting the log!');
+        } else {
+          endGame(false, 'You fell off the screen!');
+        }
         return;
       }
 
-      // Collisions with blocks (only when moving downwards)
-      if (ball.vy >= 0) {
-        for (let block of blocks) {
-          if (checkCollision(ball, block)) {
-            // Place ball on top of block
-            ball.y = block.y - ball.radius;
-            ball.vy = -Math.abs(ball.vy) * BOUNCE_FACTOR;
-
-            if (block.type === 'sand') {
+      // Collisions with blocks - Breakout style
+      for (let block of blocks) {
+        if (checkCollision(ball, block)) {
+          if (block.type === 'sand') {
+            if (!hasHitLog) {
+                startLogFlyAway('You hit sand before hitting the log!');
+            } else {
               endGame(false, 'You hit a sand block!');
-              return;
             }
-            // For grass we simply bounce and keep going
+            return;
+          }
+          // For grass: Breakout-style bounce
+          if (block.type === 'grass') {
+            // Count grass hits and check level/ win condition
+            grassHitCount++;
+            const target = grassTarget(currentLevel);
+            if (grassHitCount >= target) {
+              if (currentLevel >= MAX_LEVEL) {
+                // show special victory screen for finishing level 5
+                showVictoryScreen();
+                return;
+              } else {
+                advanceLevel();
+                return;
+              }
+            }
+            // Determine which side of the block was hit
+            const ballCenterX = ball.x;
+            const ballCenterY = ball.y;
+            const blockCenterX = block.x + block.width / 2;
+            const blockCenterY = block.y + block.height / 2;
+            
+            const dx = ballCenterX - blockCenterX;
+            const dy = ballCenterY - blockCenterY;
+            
+            // Bounce based on which side is closer (Breakout style)
+            if (Math.abs(dx) > Math.abs(dy)) {
+              // Hit from left or right
+              ball.vx = -ball.vx;
+              if (dx > 0) {
+                ball.x = block.x + block.width + ball.radius;
+              } else {
+                ball.x = block.x - ball.radius;
+              }
+            } else {
+              // Hit from top or bottom
+              ball.vy = -ball.vy;
+              if (dy > 0) {
+                ball.y = block.y + block.height + ball.radius;
+              } else {
+                ball.y = block.y - ball.radius;
+              }
+            }
             break;
           }
         }
       }
 
-      // Collision with moving top log
+      // Collision with moving top log - Breakout paddle style
       const fakeBlock = {
         x: topLog.x,
         y: topLog.y,
@@ -288,25 +499,52 @@
         height: topLog.height
       };
       if (checkCollision(ball, fakeBlock)) {
-        // Determine if we hit from top or bottom or the sides
+        // Mark that the ball has hit the log
+        if (!hasHitLog) {
+          hasHitLog = true;
+        }
+        // trigger press animation
+        logPressed = true;
+        logPressStart = Date.now();
+        
+        // Breakout-style paddle bounce: angle depends on where ball hits the log
+        const ballCenterX = ball.x;
+        const logCenterX = topLog.x + topLog.width / 2;
+        const logLeft = topLog.x;
+        const logRight = topLog.x + topLog.width;
+        
+        // Calculate hit position relative to center (-1 to 1)
+        const hitPos = (ballCenterX - logCenterX) / (topLog.width / 2);
+        const clampedHitPos = Math.max(-1, Math.min(1, hitPos));
+        
+        // Determine collision side
         const fromTop = ball.y < topLog.y;
         const fromBottom = ball.y > topLog.y + topLog.height;
-
+        
         if (fromTop || fromBottom) {
-          // vertical bounce
-          ball.vy = -Math.abs(ball.vy) * LOG_BOUNCE_FACTOR;
+          // Angle-based bounce: hit from top -> bounce up; hit from bottom -> bounce down
+          const maxAngle = Math.PI / 3; // 60 degrees
+          const angle = clampedHitPos * maxAngle;
+          const speed = BALL_SPEED;
           if (fromTop) {
+            // Place ball above the log and send it upward
             ball.y = topLog.y - ball.radius;
+            ball.vx = Math.sin(angle) * speed;
+            ball.vy = -Math.abs(Math.cos(angle) * speed);
           } else {
+            // Place ball below the log and send it downward
             ball.y = topLog.y + topLog.height + ball.radius;
+            ball.vx = Math.sin(angle) * speed;
+            ball.vy = Math.abs(Math.cos(angle) * speed);
           }
         } else {
-          // side bounce
-          ball.vx = -ball.vx * LOG_BOUNCE_FACTOR;
+          // Hit from side - simple horizontal bounce
           if (ball.x < topLog.x) {
             ball.x = topLog.x - ball.radius;
+            ball.vx = -Math.abs(ball.vx);
           } else {
             ball.x = topLog.x + topLog.width + ball.radius;
+            ball.vx = Math.abs(ball.vx);
           }
         }
       }
@@ -348,8 +586,10 @@
       }
 
       // keep top log centered horizontally on resize
-      topLog.y = canvas.height * 0.2;
-      topLog.x = canvas.width / 2 - topLog.width / 2;
+        topLog.y = canvas.height * 0.2;
+        topLog.x = canvas.width / 2 - topLog.width / 2;
+        // store baseY so press animation returns properly
+        topLog.baseY = topLog.y;
 
       // make sure ball isn't below ground after resize
       if (ball.y > groundY - ball.radius) {
@@ -372,7 +612,16 @@
       document.body.style.backgroundRepeat = 'no-repeat';
       resizeCanvas();
       initBlocks();
+      // Read level from URL param if provided
+      const params = new URLSearchParams(window.location.search);
+      const lvl = parseInt(params.get('level')) || 1;
+      currentLevel = Math.min(MAX_LEVEL, Math.max(1, lvl));
+      // initialize level-specific values
+      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
       resetBall();
+      hasHitLog = false; // Reset log hit status
+      grassHitCount = 0; // reset grass hit counter
+      ballLaunchTime = 0; // Reset launch timer
       gameOverScreen.classList.remove('visible');
       gameRunning = true;
       controlsEnabled = true;
@@ -383,7 +632,8 @@
       startGame();
     }
 
-    restartBtn.addEventListener('click', restartGame);
+    // default restart button handler (used on game over)
+    restartBtn.onclick = restartGame;
 
     // Input state for log movement
     let controlsEnabled = false;
@@ -406,6 +656,16 @@
       }
     });
 
+    // Move the log continuously with mouse movement
+    canvas.addEventListener('mousemove', (e) => {
+      if (!gameRunning || logFlying) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      topLog.x = mouseX - topLog.width / 2;
+      if (topLog.x < 0) topLog.x = 0;
+      if (topLog.x > canvas.width - topLog.width) topLog.x = canvas.width - topLog.width;
+    });
+
     // Arrow key handling for log movement (only while controlsEnabled)
     window.addEventListener('keydown', (e) => {
       if (!controlsEnabled) return;
@@ -414,10 +674,11 @@
       } else if (e.key === 'ArrowRight') {
         keys.right = true;
       } else if (e.key === ' ' && !ball.launched) {
-        // Space to launch ball
+        // Space to launch ball vertically upward
         ball.launched = true;
-        ball.vx = (Math.random() - 0.5) * (BALL_SPEED * 0.7);
-        ball.vy = 0;
+        ballLaunchTime = Date.now(); // Start timer when ball is launched
+        ball.vx = 0;
+        ball.vy = -BALL_SPEED; // Negative = upward
       }
     });
 

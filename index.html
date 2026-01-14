@@ -183,7 +183,24 @@
     <img id="logo_bouncingball" src="logobouncingball.png" alt="BouncingBall Logo">
 
     <div class="play-section">
-      <button class="play-btn" onclick="window.location.href='game.html'">PLAY</button>
+      <button class="play-btn" id="playBtn">PLAY</button>
+    </div>
+
+    <!-- Level select modal -->
+    <div id="levelSelect" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10; align-items:center; justify-content:center;">
+      <div style="background:#111; padding:24px 28px; border-radius:12px; text-align:center; color:white; max-width:90%;">
+        <h2 style="margin-bottom:12px;">Choose Level</h2>
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:12px;">
+          <button class="nav-btn" onclick="chooseLevel(1)">Level 1</button>
+          <button class="nav-btn" onclick="chooseLevel(2)">Level 2</button>
+          <button class="nav-btn" onclick="chooseLevel(3)">Level 3</button>
+          <button class="nav-btn" onclick="chooseLevel(4)">Level 4</button>
+          <button class="nav-btn" onclick="chooseLevel(5)">Level 5</button>
+        </div>
+        <div>
+          <button class="nav-btn" onclick="closeLevelSelect()">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <div class="divider">
@@ -198,5 +215,12 @@
   </div>
 
   <!-- game moved to game.html -->
+  <script>
+    const playBtn = document.getElementById('playBtn');
+    const levelSelect = document.getElementById('levelSelect');
+    function closeLevelSelect(){ levelSelect.style.display = 'none'; }
+    function chooseLevel(n){ window.location.href = 'game.html?level=' + n; }
+    playBtn.addEventListener('click', () => { levelSelect.style.display = 'flex'; });
+  </script>
 </body>
 </html>

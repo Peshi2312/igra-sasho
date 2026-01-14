@@ -5,40 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BouncingBall - Game</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: Arial, sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; color:#fff; position:relative; }
-    body.start-screen { background-image: url("background.png"); background-size: cover; background-position: center; background-repeat: no-repeat; }
-    #gameCanvas { border: 2px solid #fff; background-color: transparent; display:block; }
-    .game-over { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:40px; border-radius:20px; text-align:center; z-index:100; color:white; }
-    .game-over.visible { display:block; }
-    .game-over h2 { font-size:3rem; margin-bottom:20px; color:#ff4444; font-weight:900; }
-    .game-over p { font-weight:900; }
-    .game-over button { padding:15px 40px; font-size:1.5rem; font-weight:900; border:none; border-radius:10px; background:white; color:#0ea5e9; cursor:pointer; margin-top:20px; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      /* use clean background without the old white bar */
+      background-image: url("newimage.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: transparent;
+      z-index: 1;
+    }
+
+    .game-over {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      z-index: 100;
+      color: white;
+    }
+
+    .game-over.visible {
+      display: block;
+    }
+
+    .game-over h2 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      color: #ff4444;
+      font-weight: 900;
+    }
+
+    .game-over.win h2 {
+      color: #22c55e;
+    }
+
+    .game-over p {
+      font-weight: 900;
+    }
+
+    .game-over button {
+      padding: 15px 40px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      color: #0ea5e9;
+      cursor: pointer;
+      margin-top: 20px;
+    }
   </style>
 </head>
-<body class="start-screen">
-  <canvas id="gameCanvas" width="800" height="50"></canvas>
+<body>
+  <canvas id="gameCanvas" width="900" height="500"></canvas>
 
   <div class="game-over" id="gameOver">
-    <h2>GAME OVER!</h2>
-    <p>You touched the sand!</p>
+    <h2 id="gameOverTitle">GAME OVER!</h2>
+    <p id="gameOverText">You touched the sand!</p>
     <button id="restartBtn">Play Again</button>
   </div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+
     const gameOverScreen = document.getElementById('gameOver');
+    const gameOverTitle = document.getElementById('gameOverTitle');
+    const gameOverText = document.getElementById('gameOverText');
     const restartBtn = document.getElementById('restartBtn');
 
-    // Block size
-    const BLOCK_SIZE = 50;
+    // Constants
+    const BLOCK_WIDTH = 80;
+    const BLOCK_HEIGHT = 50;
+    let groundY = canvas.height - BLOCK_HEIGHT;
+    const GRAVITY = 0.20;
+    const BOUNCE_FACTOR = 0.95;
+    const SCROLL_SPEED = 2;
+    const BALL_SPEED = 14;
 
     // Ball properties
-    let ball = { x: 100, y: 25, radius: 15, vx: 3, vy: 3, color: 'white' };
+    let ball = {
+      x: canvas.width / 2,
+      y: 120,
+      radius: 15,
+      vx: 0,
+      vy: 0,
+      color: 'white',
+      launched: false
+    };
 
-    // Blocks array - type: 'grass' or 'sand'
+    // Blocks array - type: 'grass' or 'sand' (ground only)
     let blocks = [];
+
+    // Moving log at the top (player controlled)
+    let topLog = {
+      x: 0,
+      y: 90,
+      width: 260,
+      height: 60,
+      vx: 0
+    };
 
     // Game state
     let gameRunning = false;
@@ -46,37 +140,36 @@
     // Load images
     const grassImg = new Image();
     const sandImg = new Image();
+    const logImg = new Image();
     grassImg.src = 'Grass_Block.png';
     sandImg.src = 'Sand_Block.png';
-
-    function initCanvasForBottomRow() {
-      // ensure canvas shows only one block row (bottom row)
-      canvas.width = 800;
-      canvas.height = BLOCK_SIZE;
-      canvas.style.position = 'absolute';
-      canvas.style.left = '50%';
-      canvas.style.transform = 'translateX(-50%)';
-      canvas.style.bottom = '20px';
-    }
+    logImg.src = 'log.png';
 
     function initBlocks() {
       blocks = [];
-      const rows = Math.floor(600 / BLOCK_SIZE); // logical rows for block generation
-      const cols = Math.floor(canvas.width / BLOCK_SIZE);
+      const cols = Math.ceil(canvas.width / BLOCK_WIDTH) + 2;
 
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          if (row >= rows - 2) {
-            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'grass' });
-          } else if (row >= rows - 4 && col % 3 === 0) {
-            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'sand' });
-          } else if (Math.random() > 0.7) {
-            blocks.push({ x: col * BLOCK_SIZE, y: row * BLOCK_SIZE, width: BLOCK_SIZE, height: BLOCK_SIZE, type: 'grass' });
-          }
-        }
+      for (let i = 0; i < cols; i++) {
+        const typeRand = Math.random();
+        const type = typeRand < 0.2 ? 'sand' : 'grass';
+
+        blocks.push({
+          x: i * BLOCK_WIDTH,
+          y: groundY,
+          width: BLOCK_WIDTH,
+          height: BLOCK_HEIGHT,
+          type
+        });
       }
+    }
 
-      // Keep only bottom-row blocks visible on the small canvas when drawing
+    function resetBall() {
+      // Ball starts centered, not moving, waiting for right‑click launch
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height * 0.35;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.launched = false;
     }
 
     function checkCollision(ball, block) {
@@ -84,62 +177,147 @@
       const ballRight = ball.x + ball.radius;
       const ballTop = ball.y - ball.radius;
       const ballBottom = ball.y + ball.radius;
+
       const blockLeft = block.x;
       const blockRight = block.x + block.width;
       const blockTop = block.y;
       const blockBottom = block.y + block.height;
 
-      return ballRight > blockLeft && ballLeft < blockRight && ballBottom > blockTop && ballTop < blockBottom;
+      return (
+        ballRight > blockLeft &&
+        ballLeft < blockRight &&
+        ballBottom > blockTop &&
+        ballTop < blockBottom
+      );
     }
 
-    function gameOver() {
+    function endGame(win, message) {
       gameRunning = false;
       gameOverScreen.classList.add('visible');
+
+      if (win) {
+        gameOverScreen.classList.add('win');
+        gameOverTitle.textContent = 'YOU WIN!';
+      } else {
+        gameOverScreen.classList.remove('win');
+        gameOverTitle.textContent = 'GAME OVER!';
+      }
+
+      gameOverText.textContent = message;
     }
 
     function update() {
       if (!gameRunning) return;
-      ball.x += ball.vx;
-      ball.y += ball.vy;
 
+      // Scroll blocks to the left
       for (let block of blocks) {
-        // only check against blocks in the bottom row area
-        if (block.y >= (Math.floor(600 / BLOCK_SIZE) - 2) * BLOCK_SIZE) {
+        block.x -= SCROLL_SPEED;
+      }
+
+      // Recycle blocks that move off screen
+      for (let block of blocks) {
+        if (block.x + block.width < 0) {
+          block.x = Math.max(...blocks.map(b => b.x)) + BLOCK_WIDTH;
+
+          const typeRand = Math.random();
+          block.type = typeRand < 0.2 ? 'sand' : 'grass';
+        }
+      }
+
+      // Ball physics only after launch
+      if (ball.launched) {
+        ball.vy += GRAVITY;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+      }
+
+      // Wall collisions
+      if (ball.x - ball.radius <= 0) {
+        ball.x = ball.radius;
+        ball.vx = Math.abs(ball.vx);
+      } else if (ball.x + ball.radius >= canvas.width) {
+        ball.x = canvas.width - ball.radius;
+        ball.vx = -Math.abs(ball.vx);
+      }
+
+      // Top of screen
+      if (ball.y - ball.radius <= 0) {
+        ball.y = ball.radius;
+        ball.vy = Math.abs(ball.vy);
+      }
+
+      // If ball falls below bottom, lose
+      if (ball.y - ball.radius > canvas.height + 50) {
+        endGame(false, 'You fell off the screen!');
+        return;
+      }
+
+      // Collisions with blocks (only when moving downwards)
+      if (ball.vy >= 0) {
+        for (let block of blocks) {
           if (checkCollision(ball, block)) {
-            if (block.type === 'sand') { gameOver(); return; }
-            else if (block.type === 'grass') {
-              const ballCenterX = ball.x;
-              const ballCenterY = ball.y;
-              const blockCenterX = block.x + block.width / 2;
-              const blockCenterY = block.y + block.height / 2;
-              const dx = ballCenterX - blockCenterX;
-              const dy = ballCenterY - blockCenterY;
-              if (Math.abs(dx) > Math.abs(dy)) { ball.vx = -ball.vx; if (dx > 0) ball.x = block.x + block.width + ball.radius; else ball.x = block.x - ball.radius; }
-              else { ball.vy = -ball.vy; if (dy > 0) ball.y = block.y + block.height + ball.radius; else ball.y = block.y - ball.radius; }
+            // Place ball on top of block
+            ball.y = block.y - ball.radius;
+            ball.vy = -Math.abs(ball.vy) * BOUNCE_FACTOR;
+
+            if (block.type === 'sand') {
+              endGame(false, 'You hit a sand block!');
+              return;
             }
+            // For grass we simply bounce and keep going
+            break;
           }
         }
       }
 
-      if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) { ball.vx = -ball.vx; ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x)); }
-      if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) { ball.vy = -ball.vy; ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y)); }
+      // Collision with moving top log
+      const fakeBlock = {
+        x: topLog.x,
+        y: topLog.y,
+        width: topLog.width,
+        height: topLog.height
+      };
+      if (checkCollision(ball, fakeBlock)) {
+        // Determine if we hit from top or bottom or the sides
+        const fromTop = ball.y < topLog.y;
+        const fromBottom = ball.y > topLog.y + topLog.height;
+
+        if (fromTop || fromBottom) {
+          // vertical bounce
+          ball.vy = -ball.vy * BOUNCE_FACTOR;
+          if (fromTop) {
+            ball.y = topLog.y - ball.radius;
+          } else {
+            ball.y = topLog.y + topLog.height + ball.radius;
+          }
+        } else {
+          // side bounce
+          ball.vx = -ball.vx * BOUNCE_FACTOR;
+          if (ball.x < topLog.x) {
+            ball.x = topLog.x - ball.radius;
+          } else {
+            ball.x = topLog.x + topLog.width + ball.radius;
+          }
+        }
+      }
     }
 
     function draw() {
-      // clear small canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // draw only blocks that intersect the visible bottom row
-      const rows = Math.floor(600 / BLOCK_SIZE);
-      const visibleTop = (rows - 2) * BLOCK_SIZE;
-
+      // Draw blocks (ground)
       for (let block of blocks) {
-        if (block.y >= visibleTop) {
-          if (block.type === 'grass') ctx.drawImage(grassImg, block.x, block.y - visibleTop, block.width, block.height);
-          else if (block.type === 'sand') ctx.drawImage(sandImg, block.x, block.y - visibleTop, block.width, block.height);
+        if (block.type === 'grass') {
+          ctx.drawImage(grassImg, block.x, block.y, block.width, block.height);
+        } else if (block.type === 'sand') {
+          ctx.drawImage(sandImg, block.x, block.y, block.width, block.height);
         }
       }
 
+      // Draw moving top log
+      ctx.drawImage(logImg, topLog.x, topLog.y, topLog.width, topLog.height);
+
+      // Draw ball (simple white circle)
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       ctx.fillStyle = ball.color;
@@ -149,22 +327,98 @@
       ctx.stroke();
     }
 
-    function gameLoop() { if (!gameRunning) return; update(); draw(); requestAnimationFrame(gameLoop); }
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      groundY = canvas.height - BLOCK_HEIGHT;
+
+      // keep ground stuck to bottom
+      for (let block of blocks) {
+        block.y = groundY;
+      }
+
+      // keep top log centered horizontally on resize
+      topLog.y = canvas.height * 0.2;
+      topLog.x = canvas.width / 2 - topLog.width / 2;
+
+      // make sure ball isn't below ground after resize
+      if (ball.y > groundY - ball.radius) {
+        ball.y = groundY - ball.radius;
+        ball.vy = 0;
+      }
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
 
     function startGame() {
-      initCanvasForBottomRow();
+      resizeCanvas();
       initBlocks();
-      ball.x = 100; ball.y = 25; ball.vx = 3; ball.vy = 3;
-      gameRunning = true; gameOverScreen.classList.remove('visible');
+      resetBall();
+      gameOverScreen.classList.remove('visible');
+      gameRunning = true;
       gameLoop();
     }
 
-    function restartGame() { gameOverScreen.classList.remove('visible'); startGame(); }
+    function restartGame() {
+      startGame();
+    }
 
     restartBtn.addEventListener('click', restartGame);
 
-    // start immediately when page loads
-    window.addEventListener('load', () => { startGame(); });
+    // Input state for log movement
+    let controlsEnabled = false;
+    const keys = {
+      left: false,
+      right: false
+    };
+
+    // When mouse is pressed (anywhere on canvas) drop the ball and enable controls
+    canvas.addEventListener('mousedown', (e) => {
+      // left button (0) or right (2) – treat both the same for simplicity
+      if (!gameRunning || ball.launched) return;
+      controlsEnabled = true;
+
+      // Ball starts falling straight down with optional small horizontal drift
+      ball.launched = true;
+      ball.vx = (Math.random() - 0.5) * (BALL_SPEED * 0.7);
+      ball.vy = 0; // gravity will pull it down
+    });
+
+    // Arrow key handling for log movement (only while controlsEnabled)
+    window.addEventListener('keydown', (e) => {
+      if (!controlsEnabled) return;
+      if (e.key === 'ArrowLeft') {
+        keys.left = true;
+      } else if (e.key === 'ArrowRight') {
+        keys.right = true;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft') {
+        keys.left = false;
+      } else if (e.key === 'ArrowRight') {
+        keys.right = false;
+      }
+    });
+
+    // Start when page loads
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      startGame();
+    });
+
+    // Resize handler for full-screen behaviour
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      // re-generate blocks to fill new width
+      initBlocks();
+    });
   </script>
 </body>
 </html>

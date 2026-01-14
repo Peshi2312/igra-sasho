@@ -107,9 +107,10 @@
     const BLOCK_HEIGHT = 50;
     let groundY = canvas.height - BLOCK_HEIGHT;
     const GRAVITY = 0.20;
-    const BOUNCE_FACTOR = 0.95;
+    const BOUNCE_FACTOR = 1.0;
+    const LOG_BOUNCE_FACTOR = 1.0;
     const SCROLL_SPEED = 2;
-    const BALL_SPEED = 14;
+    const BALL_SPEED = 18;
 
     // Ball properties
     let ball = {
@@ -129,8 +130,8 @@
     let topLog = {
       x: 0,
       y: 90,
-      width: 260,
-      height: 60,
+      width: 280,
+      height: 65,
       vx: 0
     };
 
@@ -151,8 +152,7 @@
 
       for (let i = 0; i < cols; i++) {
         const typeRand = Math.random();
-        const type = typeRand < 0.2 ? 'sand' : 'grass';
-
+        const type = typeRand < 0.3 ? 'sand' : 'grass';
         blocks.push({
           x: i * BLOCK_WIDTH,
           y: groundY,
@@ -208,6 +208,16 @@
 
     function update() {
       if (!gameRunning) return;
+
+      // Move log with arrow keys
+      if (controlsEnabled) {
+        if (keys.left && topLog.x > 0) {
+          topLog.x -= 5;
+        }
+        if (keys.right && topLog.x < canvas.width - topLog.width) {
+          topLog.x += 5;
+        }
+      }
 
       // Scroll blocks to the left
       for (let block of blocks) {
@@ -284,7 +294,7 @@
 
         if (fromTop || fromBottom) {
           // vertical bounce
-          ball.vy = -ball.vy * BOUNCE_FACTOR;
+          ball.vy = -Math.abs(ball.vy) * LOG_BOUNCE_FACTOR;
           if (fromTop) {
             ball.y = topLog.y - ball.radius;
           } else {
@@ -292,7 +302,7 @@
           }
         } else {
           // side bounce
-          ball.vx = -ball.vx * BOUNCE_FACTOR;
+          ball.vx = -ball.vx * LOG_BOUNCE_FACTOR;
           if (ball.x < topLog.x) {
             ball.x = topLog.x - ball.radius;
           } else {
@@ -356,11 +366,16 @@
     }
 
     function startGame() {
+      document.body.style.backgroundImage = 'url("back.png")';
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
       resizeCanvas();
       initBlocks();
       resetBall();
       gameOverScreen.classList.remove('visible');
       gameRunning = true;
+      controlsEnabled = true;
       gameLoop();
     }
 
@@ -377,16 +392,18 @@
       right: false
     };
 
-    // When mouse is pressed (anywhere on canvas) drop the ball and enable controls
+    // When mouse is pressed (left click to move log)
     canvas.addEventListener('mousedown', (e) => {
-      // left button (0) or right (2) – treat both the same for simplicity
-      if (!gameRunning || ball.launched) return;
-      controlsEnabled = true;
+      if (!gameRunning) return;
 
-      // Ball starts falling straight down with optional small horizontal drift
-      ball.launched = true;
-      ball.vx = (Math.random() - 0.5) * (BALL_SPEED * 0.7);
-      ball.vy = 0; // gravity will pull it down
+      if (e.button === 0) {
+        // Left click to move log
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        topLog.x = mouseX - topLog.width / 2;
+        if (topLog.x < 0) topLog.x = 0;
+        if (topLog.x > canvas.width - topLog.width) topLog.x = canvas.width - topLog.width;
+      }
     });
 
     // Arrow key handling for log movement (only while controlsEnabled)
@@ -396,6 +413,11 @@
         keys.left = true;
       } else if (e.key === 'ArrowRight') {
         keys.right = true;
+      } else if (e.key === ' ' && !ball.launched) {
+        // Space to launch ball
+        ball.launched = true;
+        ball.vx = (Math.random() - 0.5) * (BALL_SPEED * 0.7);
+        ball.vy = 0;
       }
     });
 

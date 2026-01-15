@@ -13,7 +13,10 @@
 
     body {
       font-family: 'Arial', sans-serif;
-      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      background-image: url("newimage.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -48,6 +51,29 @@
     h2 {
       font-size: 2rem;
       margin-bottom: 20px;
+    }
+
+    .level-btn {
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      border-radius: 10px;
+      border: none;
+      background: white;
+      color: #0ea5e9;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .level-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .level-btn:active {
+      transform: translateY(0);
     }
 
     .option-item {
@@ -107,42 +133,25 @@
 </head>
 <body>
   <div class="container">
-    <h1>OPTIONS</h1>
+    <h1>CHOOSE LEVEL</h1>
 
     <div class="options-section">
-      <h2>Game Settings</h2>
-
-      <div class="option-item">
-        <span class="option-label">Difficulty</span>
-        <select>
-          <option>Easy</option>
-          <option selected>Medium</option>
-          <option>Hard</option>
-        </select>
-      </div>
-
-      <div class="option-item">
-        <span class="option-label">Sound Volume</span>
-        <input type="range" min="0" max="100" value="70">
-      </div>
-
-      <div class="option-item">
-        <span class="option-label">Music Volume</span>
-        <input type="range" min="0" max="100" value="50">
-      </div>
-
-      <div class="option-item">
-        <span class="option-label">Ball Color</span>
-        <select>
-          <option>White</option>
-          <option>Red</option>
-          <option>Green</option>
-          <option>Yellow</option>
-        </select>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <button class="level-btn" onclick="startGame(1)">Level 1</button>
+        <button class="level-btn" onclick="startGame(2)">Level 2</button>
+        <button class="level-btn" onclick="startGame(3)">Level 3</button>
+        <button class="level-btn" onclick="startGame(4)">Level 4</button>
+        <button class="level-btn" onclick="startGame(5)">Level 5</button>
       </div>
     </div>
 
-    <button class="back-btn" onclick="window.location.href='/'">Back</button>
+    <button class="back-btn" onclick="window.location.href='index.html'">Back</button>
   </div>
+
+  <script>
+    function startGame(level) {
+      window.location.href = 'game.html?level=' + level;
+    }
+  </script>
 </body>
 </html>

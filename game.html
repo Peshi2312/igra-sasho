@@ -169,14 +169,15 @@
     // Log fly-away state
     let logFlying = false;
     let logFlyMessage = '';
-    // Track grass hits for win condition
-    let grassHitCount = 0;
+    // Track stars collected for win condition
+    let starsCollected = 0;
+    let stars = []; // Array to hold star objects
     // Leveling
     let currentLevel = 1;
     const MAX_LEVEL = 5;
 
-    function grassTarget(level) {
-      return 6 + (level - 1) * 2;
+    function starsRequired(level) {
+      return 3 + (level - 1); // Level 1 = 3 stars, Level 2 = 4 stars, etc.
     }
 
     function doAdvance(next) {
@@ -185,11 +186,12 @@
       // increase speed slightly
       BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
       // reset state for next level
-      grassHitCount = 0;
+      starsCollected = 0;
       hasHitLog = false;
       ballLaunchTime = 0;
       resetBall();
       initBlocks();
+      initStars();
       gameRunning = true;
       controlsEnabled = true;
       requestAnimationFrame(gameLoop);
@@ -202,7 +204,7 @@
       const next = currentLevel + 1;
       // show level complete overlay with choice
       gameOverTitle.textContent = 'LEVEL ' + next + ' COMPLETE';
-      gameOverText.textContent = 'Proceed to level ' + next + '?\nTarget: ' + grassTarget(next) + ' grass hits. Speed will increase.';
+      gameOverText.textContent = 'Proceed to level ' + next + '?\nTarget: ' + starsRequired(next) + ' stars. Speed will increase.';
       // show menu option
       menuBtn.style.display = 'inline-block';
       restartBtn.textContent = 'Next Level';
@@ -243,6 +245,21 @@
       }
     }
 
+    function initStars() {
+      stars = [];
+      // Randomly place stars on grass blocks
+      for (let block of blocks) {
+        if (block.type === 'grass' && Math.random() < 0.4) { // 40% chance of star on grass
+          stars.push({
+            x: block.x + block.width / 2,
+            y: block.y - 30,
+            radius: 10,
+            collected: false
+          });
+        }
+      }
+    }
+
     function resetBall() {
       // Ball starts centered, not moving, waiting for right‑click launch
       ball.x = canvas.width / 2;
@@ -273,8 +290,9 @@
 
     function endGame(win, message) {
       gameRunning = false;
-      // hide level/menu option by default on final game over
-      menuBtn.style.display = 'none';
+      // show menu option
+      menuBtn.style.display = 'inline-block';
+      menuBtn.onclick = () => { window.location.href = 'index.html'; };
       restartBtn.textContent = 'Play Again';
       restartBtn.onclick = restartGame;
 
@@ -375,6 +393,11 @@
         block.x -= SCROLL_SPEED;
       }
 
+      // Scroll stars to the left
+      for (let star of stars) {
+        star.x -= SCROLL_SPEED;
+      }
+
       // Recycle blocks that move off screen
       for (let block of blocks) {
         if (block.x + block.width < 0) {
@@ -382,6 +405,17 @@
 
           const typeRand = Math.random();
           block.type = typeRand < 0.2 ? 'sand' : 'grass';
+          
+          // Remove old stars and generate new ones
+          stars = stars.filter(s => s.x > 0);
+          if (block.type === 'grass' && Math.random() < 0.4) {
+            stars.push({
+              x: block.x + block.width / 2,
+              y: block.y - 30,
+              radius: 10,
+              collected: false
+            });
+          }
         }
       }
 
@@ -444,21 +478,8 @@
             }
             return;
           }
-          // For grass: Breakout-style bounce
+          // For grass: Breakout-style bounce (no win condition tied to grass anymore)
           if (block.type === 'grass') {
-            // Count grass hits and check level/ win condition
-            grassHitCount++;
-            const target = grassTarget(currentLevel);
-            if (grassHitCount >= target) {
-              if (currentLevel >= MAX_LEVEL) {
-                // show special victory screen for finishing level 5
-                showVictoryScreen();
-                return;
-              } else {
-                advanceLevel();
-                return;
-              }
-            }
             // Determine which side of the block was hit
             const ballCenterX = ball.x;
             const ballCenterY = ball.y;
@@ -490,6 +511,34 @@
           }
         }
       }
+
+      // Star collection
+      for (let star of stars) {
+        if (!star.collected) {
+          const dx = star.x - ball.x;
+          const dy = star.y - ball.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < star.radius + ball.radius) {
+            star.collected = true;
+            starsCollected++;
+            
+            const target = starsRequired(currentLevel);
+            if (starsCollected >= target) {
+              if (currentLevel >= MAX_LEVEL) {
+                // show special victory screen for finishing level 5
+                showVictoryScreen();
+                return;
+              } else {
+                advanceLevel();
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      
 
       // Collision with moving top log - Breakout paddle style
       const fakeBlock = {
@@ -562,6 +611,19 @@
         }
       }
 
+      // Draw stars
+      for (let star of stars) {
+        if (!star.collected) {
+          ctx.fillStyle = '#FFD700'; // Gold color
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#FFA500';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
       // Draw moving top log
       ctx.drawImage(logImg, topLog.x, topLog.y, topLog.width, topLog.height);
 
@@ -573,6 +635,12 @@
       ctx.strokeStyle = '#333';
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Draw stars collected counter
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('Stars: ' + starsCollected + ' / ' + starsRequired(currentLevel), 20, 40);
+      ctx.fillText('Level: ' + currentLevel, 20, 70);
     }
 
     function resizeCanvas() {
@@ -620,8 +688,9 @@
       BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
       resetBall();
       hasHitLog = false; // Reset log hit status
-      grassHitCount = 0; // reset grass hit counter
+      starsCollected = 0; // reset stars collected
       ballLaunchTime = 0; // Reset launch timer
+      initStars();
       gameOverScreen.classList.remove('visible');
       gameRunning = true;
       controlsEnabled = true;
@@ -629,7 +698,20 @@
     }
 
     function restartGame() {
-      startGame();
+      // Restart the current level without changing it
+      starsCollected = 0;
+      hasHitLog = false;
+      ballLaunchTime = 0;
+      logFlying = false;
+      logFlyMessage = '';
+      resetBall();
+      initBlocks();
+      initStars();
+      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
+      gameOverScreen.classList.remove('visible');
+      gameRunning = true;
+      controlsEnabled = true;
+      requestAnimationFrame(gameLoop);
     }
 
     // default restart button handler (used on game over)

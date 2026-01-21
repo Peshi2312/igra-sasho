@@ -172,12 +172,38 @@
     // Track stars collected for win condition
     let starsCollected = 0;
     let stars = []; // Array to hold star objects
+    // Track eggs collected (used for level-specific win condition)
+    let eggsCollected = 0;
+    let eggs = []; // Array to hold egg objects
+    // Level 3: switch/portal state
+    let switchHit = false;
+    let portalActive = false;
+    let levelSwitch = null;
+    let portal = null;
     // Leveling
     let currentLevel = 1;
     const MAX_LEVEL = 5;
 
     function starsRequired(level) {
+      // Level 3 uses fewer stars (special objective)
+      if (level === 3) return 2;
+      // Level 4 requires 6 stars
+      if (level === 4) return 6;
       return 3 + (level - 1); // Level 1 = 3 stars, Level 2 = 4 stars, etc.
+    }
+
+    function eggsRequired(level) {
+      // Level 2 and Level 4 require eggs
+      return (level === 2 || level === 4) ? 2 : 0;
+    }
+
+    function levelGoalsText(level) {
+      const s = starsRequired(level) + ' stars';
+      const e = eggsRequired(level);
+      const needsPortal = level === 3 || level === 4;
+      let text = e > 0 ? (s + ' + ' + e + ' eggs') : s;
+      if (needsPortal) text += ' + open portal';
+      return text;
     }
 
     function doAdvance(next) {
@@ -187,11 +213,16 @@
       BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
       // reset state for next level
       starsCollected = 0;
+      eggsCollected = 0;
+      switchHit = false;
+      portalActive = false;
       hasHitLog = false;
       ballLaunchTime = 0;
       resetBall();
       initBlocks();
       initStars();
+      initEggs();
+      initSwitchAndPortal();
       gameRunning = true;
       controlsEnabled = true;
       requestAnimationFrame(gameLoop);
@@ -204,7 +235,7 @@
       const next = currentLevel + 1;
       // show level complete overlay with choice
       gameOverTitle.textContent = 'LEVEL ' + next + ' COMPLETE';
-      gameOverText.textContent = 'Proceed to level ' + next + '?\nTarget: ' + starsRequired(next) + ' stars. Speed will increase.';
+      gameOverText.textContent = 'Proceed to level ' + next + '?\nTarget: ' + levelGoalsText(next) + '. Speed will increase.';
       // show menu option
       menuBtn.style.display = 'inline-block';
       restartBtn.textContent = 'Next Level';
@@ -234,7 +265,9 @@
 
       for (let i = 0; i < cols; i++) {
         const typeRand = Math.random();
-        const type = typeRand < 0.3 ? 'sand' : 'grass';
+        // Level 3 and 4 have a bit less sand than other levels, but more than before
+        const sandChance = (currentLevel === 3 || currentLevel === 4) ? 0.2 : 0.3;
+        const type = typeRand < sandChance ? 'sand' : 'grass';
         blocks.push({
           x: i * BLOCK_WIDTH,
           y: groundY,
@@ -258,6 +291,66 @@
           });
         }
       }
+    }
+
+    function initEggs() {
+      eggs = [];
+      const need = eggsRequired(currentLevel);
+      if (need <= 0) return;
+
+      // Place exactly "need" eggs on (distinct) grass blocks so Level 2 is always completable.
+      const grassBlocks = blocks.filter(b => b.type === 'grass');
+      // Fallback: if somehow no grass blocks exist, place near the ground
+      if (grassBlocks.length === 0) {
+        for (let i = 0; i < need; i++) {
+          eggs.push({
+            x: canvas.width * (0.35 + i * 0.2),
+            y: groundY - 30,
+            rx: 10,
+            ry: 14,
+            collected: false
+          });
+        }
+        return;
+      }
+
+      // Shuffle a copy and take first N
+      const shuffled = grassBlocks.slice().sort(() => Math.random() - 0.5);
+      for (let i = 0; i < Math.min(need, shuffled.length); i++) {
+        const block = shuffled[i];
+        eggs.push({
+          x: block.x + block.width / 2,
+          y: block.y - 30,
+          rx: 10,
+          ry: 14,
+          collected: false
+        });
+      }
+    }
+
+    // Level 3 and 4: switch opens a portal; entering portal wins (with stars)
+    function initSwitchAndPortal() {
+      switchHit = false;
+      portalActive = false;
+      levelSwitch = null;
+      portal = null;
+      if (currentLevel !== 3 && currentLevel !== 4) return;
+      // Place the switch near the right side; static so it's reachable.
+      levelSwitch = {
+        x: canvas.width * 0.72,
+        // keep it sitting on the ground
+        y: groundY - 52,
+        width: 52,
+        height: 52,
+        pressed: false
+      };
+      // Portal appears after switch hit; define its position.
+      portal = {
+        x: canvas.width * 0.35,
+        y: canvas.height * 0.35,
+        radius: 30,
+        glow: 42
+      };
     }
 
     function resetBall() {
@@ -404,7 +497,9 @@
           block.x = Math.max(...blocks.map(b => b.x)) + BLOCK_WIDTH;
 
           const typeRand = Math.random();
-          block.type = typeRand < 0.2 ? 'sand' : 'grass';
+          // Level 3 and 4 have a bit less sand when recycling blocks too, but more than before
+          const sandChanceRecycle = (currentLevel === 3 || currentLevel === 4) ? 0.15 : 0.2;
+          block.type = typeRand < sandChanceRecycle ? 'sand' : 'grass';
           
           // Remove old stars and generate new ones
           stars = stars.filter(s => s.x > 0);
@@ -415,6 +510,24 @@
               radius: 10,
               collected: false
             });
+          }
+
+          // Remove old eggs and (for level 2) spawn new ones occasionally on fresh grass
+          if (eggsRequired(currentLevel) > 0) {
+            eggs = eggs.filter(e => e.x > 0);
+            // Keep eggs count at the required amount: if an egg scrolls off-screen uncollected,
+            // add a replacement sometimes so the player can still finish.
+            const need = eggsRequired(currentLevel);
+            const activeEggs = eggs.filter(e => !e.collected).length;
+            if (block.type === 'grass' && activeEggs < need && Math.random() < 0.6) {
+              eggs.push({
+                x: block.x + block.width / 2,
+                y: block.y - 30,
+                rx: 10,
+                ry: 14,
+                collected: false
+              });
+            }
           }
         }
       }
@@ -522,19 +635,64 @@
           if (dist < star.radius + ball.radius) {
             star.collected = true;
             starsCollected++;
-            
-            const target = starsRequired(currentLevel);
-            if (starsCollected >= target) {
-              if (currentLevel >= MAX_LEVEL) {
-                // show special victory screen for finishing level 5
-                showVictoryScreen();
-                return;
-              } else {
-                advanceLevel();
-                return;
-              }
-            }
           }
+        }
+      }
+
+      // Egg collection (only meaningful on level 2)
+      for (let egg of eggs) {
+        if (!egg.collected) {
+          // Simple ellipse collision approximation: treat as circle using average radius
+          const dx = egg.x - ball.x;
+          const dy = egg.y - ball.y;
+          const approxR = (egg.rx + egg.ry) / 2;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < approxR + ball.radius) {
+            egg.collected = true;
+            eggsCollected++;
+          }
+        }
+      }
+
+      // Switch interaction (Level 3 and 4)
+      if ((currentLevel === 3 || currentLevel === 4) && levelSwitch && !switchHit) {
+        const hit =
+          ball.x + ball.radius > levelSwitch.x &&
+          ball.x - ball.radius < levelSwitch.x + levelSwitch.width &&
+          ball.y + ball.radius > levelSwitch.y &&
+          ball.y - ball.radius < levelSwitch.y + levelSwitch.height;
+        if (hit) {
+          switchHit = true;
+          portalActive = true;
+          levelSwitch.pressed = true;
+        }
+      }
+
+      // Portal entry (Level 3 and 4)
+      let enteredPortal = false;
+      if ((currentLevel === 3 || currentLevel === 4) && portalActive && portal) {
+        const dx = portal.x - ball.x;
+        const dy = portal.y - ball.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < portal.radius + ball.radius) {
+          enteredPortal = true;
+        }
+      }
+
+      // Win condition: keep existing star requirements; level 2 and 4 need eggs; level 3 and 4 need portal
+      const starTarget = starsRequired(currentLevel);
+      const eggTarget = eggsRequired(currentLevel);
+      const starsOk = starsCollected >= starTarget;
+      const eggsOk = eggsCollected >= eggTarget;
+      const portalOk = (currentLevel === 3 || currentLevel === 4) ? portalActive && enteredPortal : true;
+      if (starsOk && eggsOk && portalOk) {
+        if (currentLevel >= MAX_LEVEL) {
+          // show special victory screen for finishing level 5
+          showVictoryScreen();
+          return;
+        } else {
+          advanceLevel();
+          return;
         }
       }
 
@@ -624,6 +782,64 @@
         }
       }
 
+      // Draw eggs (Level 2 collectible)
+      for (let egg of eggs) {
+        if (!egg.collected) {
+          // Egg body
+          ctx.save();
+          ctx.translate(egg.x, egg.y);
+          ctx.fillStyle = '#fff8dc'; // cornsilk
+          ctx.beginPath();
+          ctx.ellipse(0, 0, egg.rx, egg.ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#e5e7eb';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // highlight
+          ctx.globalAlpha = 0.35;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(-3, -4, egg.rx * 0.35, egg.ry * 0.45, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // Draw switch (Level 3 and 4)
+      if ((currentLevel === 3 || currentLevel === 4) && levelSwitch) {
+        ctx.fillStyle = levelSwitch.pressed ? '#22c55e' : '#f97316';
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 2;
+        ctx.fillRect(levelSwitch.x, levelSwitch.y, levelSwitch.width, levelSwitch.height);
+        ctx.strokeRect(levelSwitch.x, levelSwitch.y, levelSwitch.width, levelSwitch.height);
+      }
+
+      // Draw portal (Level 3 and 4, after switch)
+      if ((currentLevel === 3 || currentLevel === 4) && portalActive && portal) {
+        ctx.save();
+        ctx.translate(portal.x, portal.y);
+        // outer glow
+        const gradient = ctx.createRadialGradient(0, 0, 4, 0, 0, portal.glow);
+        gradient.addColorStop(0, 'rgba(59,130,246,0.5)');
+        gradient.addColorStop(1, 'rgba(59,130,246,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, portal.glow, 0, Math.PI * 2);
+        ctx.fill();
+        // inner ring
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, portal.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        // core
+        ctx.fillStyle = 'rgba(147,197,253,0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, portal.radius * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       // Draw moving top log
       ctx.drawImage(logImg, topLog.x, topLog.y, topLog.width, topLog.height);
 
@@ -641,6 +857,14 @@
       ctx.font = 'bold 24px Arial';
       ctx.fillText('Stars: ' + starsCollected + ' / ' + starsRequired(currentLevel), 20, 40);
       ctx.fillText('Level: ' + currentLevel, 20, 70);
+      const eggTarget = eggsRequired(currentLevel);
+      if (eggTarget > 0) {
+        ctx.fillText('Eggs: ' + eggsCollected + ' / ' + eggTarget, 20, 100);
+      }
+      if (currentLevel === 3 || currentLevel === 4) {
+        const portalText = portalActive ? 'Portal: OPEN' : 'Portal: OFF';
+        ctx.fillText(portalText, 20, 130);
+      }
     }
 
     function resizeCanvas() {
@@ -689,8 +913,13 @@
       resetBall();
       hasHitLog = false; // Reset log hit status
       starsCollected = 0; // reset stars collected
+      eggsCollected = 0; // reset eggs collected
+      switchHit = false;
+      portalActive = false;
       ballLaunchTime = 0; // Reset launch timer
       initStars();
+      initEggs();
+      initSwitchAndPortal();
       gameOverScreen.classList.remove('visible');
       gameRunning = true;
       controlsEnabled = true;
@@ -700,6 +929,9 @@
     function restartGame() {
       // Restart the current level without changing it
       starsCollected = 0;
+      eggsCollected = 0;
+      switchHit = false;
+      portalActive = false;
       hasHitLog = false;
       ballLaunchTime = 0;
       logFlying = false;
@@ -707,6 +939,8 @@
       resetBall();
       initBlocks();
       initStars();
+      initEggs();
+      initSwitchAndPortal();
       BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
       gameOverScreen.classList.remove('visible');
       gameRunning = true;

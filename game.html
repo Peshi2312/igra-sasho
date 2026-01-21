@@ -570,14 +570,10 @@
         ball.vy = Math.abs(ball.vy); // Bounce down
       }
 
-      // If ball falls below bottom, lose (only if hasn't hit log yet)
-      if (ball.y - ball.radius > canvas.height + 50) {
-        if (!hasHitLog) {
-          startLogFlyAway('You fell off before hitting the log!');
-        } else {
-          endGame(false, 'You fell off the screen!');
-        }
-        return;
+      // Bottom of screen - bounce back up instead of falling off
+      if (ball.y + ball.radius >= canvas.height) {
+        ball.y = canvas.height - ball.radius;
+        ball.vy = -Math.abs(ball.vy); // Bounce up
       }
 
       // Collisions with blocks - Breakout style

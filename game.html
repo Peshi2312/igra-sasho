@@ -189,6 +189,8 @@
       if (level === 3) return 2;
       // Level 4 requires 6 stars
       if (level === 4) return 6;
+      // Level 5 requirement (set to 6 stars)
+      if (level === 5) return 6;
       return 3 + (level - 1); // Level 1 = 3 stars, Level 2 = 4 stars, etc.
     }
 
@@ -209,8 +211,8 @@
     function doAdvance(next) {
       gameOverScreen.classList.remove('visible');
       currentLevel = next;
-      // increase speed slightly
-      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
+      // keep ball speed constant across all levels (same as level 1)
+      BALL_SPEED = BASE_BALL_SPEED;
       // reset state for next level
       starsCollected = 0;
       eggsCollected = 0;
@@ -255,9 +257,12 @@
     const grassImg = new Image();
     const sandImg = new Image();
     const logImg = new Image();
+    const eggImg = new Image();
     grassImg.src = 'Grass_Block.png';
     sandImg.src = 'Sand_Block.png';
     logImg.src = 'log.png';
+    // Egg image from pngimg.com
+    eggImg.src = 'https://pngimg.com/uploads/egg/egg_PNG97974.png';
 
     function initBlocks() {
       blocks = [];
@@ -265,8 +270,8 @@
 
       for (let i = 0; i < cols; i++) {
         const typeRand = Math.random();
-        // Level 3 and 4 have a bit less sand than other levels, but more than before
-        const sandChance = (currentLevel === 3 || currentLevel === 4) ? 0.2 : 0.3;
+        // Level 3 and 4 have a bit less sand; level 5 spawns even less sand
+        const sandChance = (currentLevel === 3 || currentLevel === 4) ? 0.2 : (currentLevel === 5 ? 0.1 : 0.3);
         const type = typeRand < sandChance ? 'sand' : 'grass';
         blocks.push({
           x: i * BLOCK_WIDTH,
@@ -296,35 +301,57 @@
     function initEggs() {
       eggs = [];
       const need = eggsRequired(currentLevel);
-      if (need <= 0) return;
+      // Allow eggs to spawn in level 5 as hazards even though eggs aren't "required" there
+      if (need <= 0 && currentLevel !== 5) return;
 
-      // Place exactly "need" eggs on (distinct) grass blocks so Level 2 is always completable.
+      // Place eggs more like stars but less frequently (random on grass blocks).
       const grassBlocks = blocks.filter(b => b.type === 'grass');
+      const eggSpawnChance = currentLevel === 5 ? 0.08 : 0.18; // fewer eggs in level 5
       // Fallback: if somehow no grass blocks exist, place near the ground
       if (grassBlocks.length === 0) {
         for (let i = 0; i < need; i++) {
           eggs.push({
             x: canvas.width * (0.35 + i * 0.2),
             y: groundY - 30,
-            rx: 10,
-            ry: 14,
+            rx: 14,
+            ry: 20,
             collected: false
           });
         }
         return;
       }
 
-      // Shuffle a copy and take first N
-      const shuffled = grassBlocks.slice().sort(() => Math.random() - 0.5);
-      for (let i = 0; i < Math.min(need, shuffled.length); i++) {
-        const block = shuffled[i];
-        eggs.push({
-          x: block.x + block.width / 2,
-          y: block.y - 30,
-          rx: 10,
-          ry: 14,
-          collected: false
-        });
+      // Randomly spawn eggs on grass blocks with a lower chance than stars.
+      for (let block of grassBlocks) {
+        if (Math.random() < eggSpawnChance) {
+          eggs.push({
+            x: block.x + block.width / 2,
+            y: block.y - 30,
+            rx: 14,
+            ry: 20,
+            collected: false
+          });
+        }
+      }
+
+      // Ensure the required number of eggs exist: if random placement produced fewer,
+      // add eggs on distinct random grass blocks until the required amount is reached.
+      if (eggs.length < need) {
+        const shuffled = grassBlocks.slice().sort(() => Math.random() - 0.5);
+        let idx = 0;
+        while (eggs.length < need && idx < shuffled.length) {
+          const block = shuffled[idx++];
+          const eggX = block.x + block.width / 2;
+          if (!eggs.find(e => Math.abs(e.x - eggX) < 1)) {
+            eggs.push({
+              x: eggX,
+              y: block.y - 30,
+              rx: 10,
+              ry: 14,
+              collected: false
+            });
+          }
+        }
       }
     }
 
@@ -491,14 +518,19 @@
         star.x -= SCROLL_SPEED;
       }
 
+      // Scroll eggs to the left (eggs move like stars)
+      for (let egg of eggs) {
+        egg.x -= SCROLL_SPEED;
+      }
+
       // Recycle blocks that move off screen
       for (let block of blocks) {
         if (block.x + block.width < 0) {
           block.x = Math.max(...blocks.map(b => b.x)) + BLOCK_WIDTH;
 
           const typeRand = Math.random();
-          // Level 3 and 4 have a bit less sand when recycling blocks too, but more than before
-          const sandChanceRecycle = (currentLevel === 3 || currentLevel === 4) ? 0.15 : 0.2;
+          // Level 3 and 4 have a bit less sand when recycling; level 5 even less
+          const sandChanceRecycle = (currentLevel === 3 || currentLevel === 4) ? 0.15 : (currentLevel === 5 ? 0.1 : 0.2);
           block.type = typeRand < sandChanceRecycle ? 'sand' : 'grass';
           
           // Remove old stars and generate new ones
@@ -512,19 +544,34 @@
             });
           }
 
-          // Remove old eggs and (for level 2) spawn new ones occasionally on fresh grass
+          // Remove old eggs and (for levels that need eggs) ensure required eggs exist.
+          // For level 5, allow occasional egg spawns on fresh grass (less frequent).
           if (eggsRequired(currentLevel) > 0) {
             eggs = eggs.filter(e => e.x > 0);
             // Keep eggs count at the required amount: if an egg scrolls off-screen uncollected,
-            // add a replacement sometimes so the player can still finish.
+            // deterministically add replacements on fresh grass blocks so the player can still finish.
             const need = eggsRequired(currentLevel);
-            const activeEggs = eggs.filter(e => !e.collected).length;
-            if (block.type === 'grass' && activeEggs < need && Math.random() < 0.6) {
+            let activeEggs = eggs.filter(e => !e.collected).length;
+            if (block.type === 'grass' && activeEggs < need) {
               eggs.push({
                 x: block.x + block.width / 2,
                 y: block.y - 30,
-                rx: 10,
-                ry: 14,
+                rx: 14,
+                ry: 20,
+                collected: false
+              });
+              activeEggs++;
+            }
+          } else if (currentLevel === 5) {
+            // Level 5: spawn eggs occasionally on grass (lower chance)
+            const eggSpawnChance = 0.08;
+            eggs = eggs.filter(e => e.x > 0);
+            if (block.type === 'grass' && Math.random() < eggSpawnChance) {
+              eggs.push({
+                x: block.x + block.width / 2,
+                y: block.y - 30,
+                rx: 14,
+                ry: 20,
                 collected: false
               });
             }
@@ -644,6 +691,11 @@
           const approxR = (egg.rx + egg.ry) / 2;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < approxR + ball.radius) {
+            if (currentLevel === 5) {
+              // Eggs are hazardous in level 5
+              endGame(false, 'You hit a poisonous egg!');
+              return;
+            }
             egg.collected = true;
             eggsCollected++;
           }
@@ -683,7 +735,7 @@
       const portalOk = (currentLevel === 3 || currentLevel === 4) ? portalActive && enteredPortal : true;
       if (starsOk && eggsOk && portalOk) {
         if (currentLevel >= MAX_LEVEL) {
-          // show special victory screen for finishing level 5
+          // show special victory screen for finishing the final level
           showVictoryScreen();
           return;
         } else {
@@ -778,26 +830,32 @@
         }
       }
 
-      // Draw eggs (Level 2 collectible)
+      // Draw eggs (Level 2 collectible) using egg image when available
       for (let egg of eggs) {
         if (!egg.collected) {
-          // Egg body
-          ctx.save();
-          ctx.translate(egg.x, egg.y);
-          ctx.fillStyle = '#fff8dc'; // cornsilk
-          ctx.beginPath();
-          ctx.ellipse(0, 0, egg.rx, egg.ry, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = '#e5e7eb';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          // highlight
-          ctx.globalAlpha = 0.35;
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.ellipse(-3, -4, egg.rx * 0.35, egg.ry * 0.45, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          if (eggImg && eggImg.complete && eggImg.naturalWidth) {
+            const w = egg.rx * 2;
+            const h = egg.ry * 2;
+            ctx.drawImage(eggImg, egg.x - w / 2, egg.y - h / 2, w, h);
+          } else {
+            // fallback to simple ellipse if image not loaded
+            ctx.save();
+            ctx.translate(egg.x, egg.y);
+            ctx.fillStyle = '#fff8dc'; // cornsilk
+            ctx.beginPath();
+            ctx.ellipse(0, 0, egg.rx, egg.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // highlight
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(-3, -4, egg.rx * 0.35, egg.ry * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
         }
       }
 
@@ -905,7 +963,7 @@
       const lvl = parseInt(params.get('level')) || 1;
       currentLevel = Math.min(MAX_LEVEL, Math.max(1, lvl));
       // initialize level-specific values
-      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
+      BALL_SPEED = BASE_BALL_SPEED;
       resetBall();
       hasHitLog = false; // Reset log hit status
       starsCollected = 0; // reset stars collected
@@ -937,7 +995,7 @@
       initStars();
       initEggs();
       initSwitchAndPortal();
-      BALL_SPEED = +(BASE_BALL_SPEED + (currentLevel - 1) * 0.5).toFixed(2);
+      BALL_SPEED = BASE_BALL_SPEED;
       gameOverScreen.classList.remove('visible');
       gameRunning = true;
       controlsEnabled = true;
